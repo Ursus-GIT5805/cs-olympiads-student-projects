@@ -86,14 +86,18 @@ def update_batch(batch,eta,sizes,weights, biases):
     weights = [w-eta/len(batch)*nw for w,nw in zip(weights,nabla_w)]
     return (weights, biases)
 
-def train(training_data, eta, epochs, batch_size, sizes, weights, biases):
+def train(training_data, eta, epochs, batch_size, sizes, weights, biases,test_data=None):
     n = len(training_data)
     for epoch in range(epochs):
         random.shuffle(training_data)
         batches = [training_data[k:k+batch_size] for k in range(0,n,batch_size)]
         for batch in batches:
             weights, biases = update_batch(batch,eta, sizes, weights, biases)
-        print(f"Epoch {epoch} complete")
+        if(test_data):
+            score = evaluate(test_data,weights,biases)/len(test_data)
+            print(f"Epoch {epoch} complete with score {score}")
+        else:
+            print(f"Epoch {epoch} complete")
     return (weights,biases)
 
 import numpy as np
@@ -113,9 +117,9 @@ def to_one_hot_from_any(y, num_classes=10):
 def main():
     (train_images,train_labels), (test_images, test_labels) = ml_datasets.mnist()
     # normalize & reshape
-    train_images = train_images.astype(jnp.float32) / 255.0
+    train_images = train_images.astype(jnp.float32) 
     train_images = train_images.reshape((-1, 784, 1))
-    test_images  = test_images.astype(jnp.float32) / 255.0
+    test_images  = test_images.astype(jnp.float32)
     test_images  = test_images.reshape((-1, 784, 1))
 
     # build datasets in your expected formats
@@ -125,8 +129,8 @@ def main():
 
     sizes = [784, 60,10]
     weights, biases = initialize_weights_biases(sizes)
-    weights, biases = train(training_data,0.5,30,10,sizes,weights,biases)
-    acc = evaluate(training_data,weights,biases) / len(training_data)
+    weights, biases = train(training_data,0.5,30,10,sizes,weights,biases,test_data)
+    acc = evaluate(test_data,weights,biases) / len(test_data)
     print(acc)
     
 if __name__ == "__main__":
