@@ -15,7 +15,7 @@ class Network:
 
         self.biases = [jax.random.normal(k, shape=(y, 1)) for k, y in zip(bias_keys, sizes[1:])]
         self.weights = [
-            jax.random.normal(k, shape=(x, y))
+            jax.random.normal(k, shape=(x, y))/np.sqrt(y)
             for k, (y, x) in zip(weight_keys, zip(sizes[:-1], sizes[1:]))
         ]
     def evaluate(self, test_data):
@@ -81,8 +81,8 @@ class Network:
 
 # --- assumes your Network class is already defined in the same session ---
 import jax
-import jax.numpy as jnp
-import numpy as np
+
+
 import tensorflow_datasets as tfds
 
 # 1) Load MNIST (all in memory)
@@ -101,9 +101,9 @@ def load_mnist():
     X_test  = (X_test.astype(np.float32)  / 255.0).reshape(-1, 784, 1)
 
     # One-hot labels for training (10 classes)
-    Y_train_oh = jax.nn.one_hot(jnp.array(y_train), 10).astype(jnp.float32).reshape(-1, 10, 1)
+    Y_train_oh = jax.nn.one_hot(np.array(y_train), 10).astype(np.float32).reshape(-1, 10, 1)
 
-    return jnp.array(X_train), Y_train_oh, jnp.array(X_test), jnp.array(y_test)
+    return np.array(X_train), Y_train_oh, np.array(X_test), np.array(y_test)
 # --- Load data ---
 X_train, Y_train_oh, X_test, y_test = load_mnist()
 print(len(X_train))
@@ -116,10 +116,9 @@ train_list = [(X_train[i], Y_train_oh[i]) for i in range(len(X_train))]
 
 # --- Train ---
 net = Network(sizes=[784, 64, 10])
-net.train(0.5,train_list ,10, 30,)
+net.train(0.5,train_list ,10, 10,)
 
 # --- Evaluate ---
 test_list = [(X_test[i], int(y_test[i])) for i in range(len(X_test))]
 acc = net.evaluate(test_list) / len(test_list)
 print(f"Test accuracy: {acc:.4f}")
-
