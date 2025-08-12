@@ -1,124 +1,218 @@
-import random
-import jax.numpy as np
 import jax
-class Network:
+# import numpy as jnp
+import jax.numpy as jnp
+from ml_datasets import mnist
+import matplotlib.pyplot as plt
+def sigmoid(x):
+    return 1.0 / (1.0 + jnp.exp(-x))
+
+def sigmoid_prime(x):
+    sig = sigmoid(x)
+    return sig * (1-sig)
+
+def make_batches(array, sz):
+    n = len(array)
+
+    key = jax.random.PRNGKey(4)
+    perm = jax.random.permutation(key, n)
+
+    i = 0
+    while i+sz < n:
+        yield [array[idx] for idx in perm[i:i+sz]]
+        i += sz
+
+    if i < n:
+        yield [array[idx] for idx in perm[i:]]
+
+
+
+@jax.jit
+def backprop(
+        biases,
+        weights,
+        data,
+        label
+):
+    err_b = [jnp.zeros(b.shape) for b in biases]
+    err_w = [jnp.zeros(w.shape) for w in weights]
+
+    a = data
+
+    activations = [a]
+    zs = []
+
+    for b, w in zip(biases, weights):
+        z = jnp.matmul(w, a) + b
+        a = sigmoid(z)
+
+        zs.append(z)
+        activations.append(a)
+
+        #Start to backpropagate
+
+    delta = (activations[-1] - label) 
+
+    err_b[-1] = delta
+    err_w[-1] = jnp.matmul(delta, activations[-2].transpose())
+
+    sizes = len(biases) + 1
+
+    for l in range(2, sizes):
+        z = zs[-l]
+        delta = jnp.matmul(weights[-l+1].transpose(), delta) * sigmoid_prime(z)
+        err_b[-l] = delta
+        err_w[-l] = jnp.matmul(delta, activations[-l-1].transpose())
+
+    return (err_b, err_w)
+
+@jax.jit
+def update_to_batch(
+    biases,
+    weights,
+    batch,
+    eta,
+):
+    err_b = [jnp.zeros(b.shape) for b in biases]
+    err_w = [jnp.zeros(w.shape) for w in weights]
+
+    for data, label in batch:
+        c_err_b, c_err_w = backprop(biases, weights, data, label)
+
+        err_b = [b1+b2 for b1, b2 in zip(err_b, c_err_b)]
+        err_w = [w1+w2 for w1, w2 in zip(err_w, c_err_w)]
+
+    sz = len(batch)
+
+    biases = [
+        b - (eta/sz) * db for b, db in zip(biases, err_b)
+    ]
+
+    weights = [
+        w - (eta/sz) * dw for w, dw in zip(weights, err_w)
+    ]
+
+    return biases, weights
+
+@jax.jit
+def feedforward(a, biases, weights):
+    for b, w in zip(biases, weights):
+        z = jnp.matmul(w, a) + b
+        a = sigmoid(z)
+    return a
+
+@jax.jit
+def singlecross(data, label,biases,weights):
+    eps = 1e-12
+    out = feedforward(data,biases,weights)         
+    summ = jnp.sum(jnp.nan_to_num(label * jnp.log(out + eps) +
+                             (1.0 - label) * jnp.log1p(-out)))
+    return summ
+class Model:
     def __init__(self, sizes):
         self.sizes = sizes
-        self.netlen = len(sizes)
-       
-        # Create a main random key
-        key = jax.random.PRNGKey(45)
+        keys_bias = jax.random.split(jax.random.PRNGKey(2), len(sizes)-1)
 
-        # Split keys for biases and weights
-        bias_keys = jax.random.split(key, len(sizes) - 1)
-        weight_keys = jax.random.split(key, len(sizes) - 1)
-
-        self.biases = [jax.random.normal(k, shape=(y, 1)) for k, y in zip(bias_keys, sizes[1:])]
-        self.weights = [
-            jax.random.normal(k, shape=(x, y))/np.sqrt(y)
-            for k, (y, x) in zip(weight_keys, zip(sizes[:-1], sizes[1:]))
+        self.biases = [
+            jax.random.normal(k, shape=(shp,1))
+            for k, shp in zip(keys_bias, sizes[1:])
         ]
-    def evaluate(self, test_data):
-        """Return the number of test inputs for which the neural
-        network outputs the correct result. Note that the neural
-        network's output is assumed to be the index of whichever
-        neuron in the final layer has the highest activation."""
-        test_results = [(np.argmax(self.feedforward(x)), y)
-                        for (x, y) in test_data]
-        return sum(int(x == y) for (x, y) in test_results)
 
-    def feedforward(self, a):
-        for b, w in zip(self.biases,self.weights):
-            a = self.sigmoid(np.dot(w,a)+b)
-        return a
-    def sigmoid(self,z):
-        return 1.0/(1.0+np.exp(-z))
-    def sigmoid_prime(self, z):
-        return self.sigmoid(z)*(1-self.sigmoid(z))
-    def activation_func(self, output, y):
-        return output-y
-    def backprop(self, x, y):
-        nabla_b = [np.zeros(b.shape) for b in self.biases]
-        nabla_w = [np.zeros(w.shape) for w in self.weights]
-        activation = x
-        activations = [x]
-        zs = []
-        for b, w in zip(self.biases,self.weights):
-            z = np.dot(w,activation)+b 
-            activation = self.sigmoid(z)
-            activations.append(activation)
-            zs.append(z)
-        delta = self.activation_func(activation,y)*self.sigmoid_prime(zs[-1])
-        nabla_b[-1] = delta
-        nabla_w[-1] = np.dot(delta,activations[-2].transpose())
-        for l in range(2,self.netlen):
-            delta = np.dot(self.weights[-l+1].transpose(),delta)*self.sigmoid_prime(zs[-l])
-            nabla_b[-l] = delta
-            nabla_w[-l] = np.dot(delta,activations[-l-1].transpose())
-        return (nabla_b, nabla_w)
+        keys_weights = jax.random.split(jax.random.PRNGKey(4), len(sizes)-1)
+        shapes = zip(sizes[1:], sizes[:-1])
 
+        self.weights = [
+            jax.random.normal(k, shape=(x,y)) / jnp.sqrt(x)
+            for k, (x,y) in zip(keys_weights, shapes)
+        ]
 
-    def update_batch(self,batch,eta):
-        nabla_b = [np.zeros(b.shape) for b in self.biases]
-        nabla_w = [np.zeros(w.shape) for w in self.weights]
-        for x, y in batch:
-            delta_nabla_b, delta_nabla_w = self.backprop(x,y)
-            nabla_b = [b+nb for b, nb in zip(nabla_b, delta_nabla_b)]
-            nabla_w = [w+nw for w, nw in zip(nabla_w, delta_nabla_w)]
-        self.biases = [b-eta/len(batch)*nb for b,nb in zip(self.biases, nabla_b)]
-        self.weights = [w-eta/len(batch)*nw for w,nw in zip(self.weights,nabla_w)]
+    # Feed forward
+    def feed_forward(self, a):
+        return feedforward(a, self.biases, self.weights)
 
-            
-    def train(self, eta, training_data, batch_size, epochs):
-        n = len(training_data)
-        for j in range(epochs):
-            random.shuffle(training_data)
-            batches = [training_data[k:k+batch_size] for k in range(0,n,batch_size)]
-            for batch in batches:
-                self.update_batch(batch,eta)
-            print(f"Epoch {j} complete")
+    def gradient_descent(
+        self,
+        train_data,
+        epochs=10,
+        batch_size=10,
+        eta=0.2,
+        return_score=False
+    ):
+        n = len(train_data)
+        scores = []
+        for epoch in range(epochs):
+           
+
+            for batch in make_batches(train_data, batch_size):
+                self.biases, self.weights = update_to_batch(
+                    self.biases,
+                    self.weights,
+                    batch,
+                    eta
+                )
+            print("Epoch {}/{}".format(epoch+1, epochs))
+            if(return_score):
+                scores.append(self.cross_entropy(train_data))
+                
+        if(return_score):
+            return scores
 
 
-# --- assumes your Network class is already defined in the same session ---
-import jax
 
 
-import tensorflow_datasets as tfds
+    def eval_labeled(
+        self,
+        test_data
+    ):
+        score = 0
+        for data, label in test_data:
+            out = self.feed_forward(data)
 
-# 1) Load MNIST (all in memory)
+            idx_label = jnp.argmax(label)
+            idx_out = jnp.argmax(out)
+
+            score += int(idx_label == idx_out)
+
+        return score / len(test_data) * 100.0
+    
+    def cross_entropy(self, test_data):
+        summ = 0.0
+        for data, label in test_data:
+            summ+=singlecross(data,label, self.biases,self.weights)
+        return -summ / len(test_data)
+
+# =====
+
+# import matplotlib.pyplot as plt
+
 def load_mnist():
-    ds_train = tfds.load("mnist", split="train", as_supervised=True, batch_size=-1)
-    ds_test  = tfds.load("mnist", split="test",  as_supervised=True, batch_size=-1)
+    (train_x, train_y), (test_x, test_y) = mnist()
 
-    train = tfds.as_numpy(ds_train)
-    test  = tfds.as_numpy(ds_test)
+    train_data = [
+        (train_x[i].reshape(-1, 1), train_y[i].reshape(-1, 1))
+        for i in range(train_x.shape[0])
+    ]
 
-    X_train, y_train = train
-    X_test,  y_test  = test
+    test_data = [
+        (test_x[i].reshape(-1, 1), test_y[i].reshape(-1, 1))
+        for i in range(test_x.shape[0])
+    ]
 
-    # Normalize to [0,1] and reshape to column vectors (784,1)
-    X_train = (X_train.astype(np.float32) / 255.0).reshape(-1, 784, 1)
-    X_test  = (X_test.astype(np.float32)  / 255.0).reshape(-1, 784, 1)
+    return train_data, test_data
 
-    # One-hot labels for training (10 classes)
-    Y_train_oh = jax.nn.one_hot(np.array(y_train), 10).astype(np.float32).reshape(-1, 10, 1)
+def plot_scores(scores):
+    plt.plot(scores)
+    plt.show()
 
-    return np.array(X_train), Y_train_oh, np.array(X_test), np.array(y_test)
-# --- Load data ---
-X_train, Y_train_oh, X_test, y_test = load_mnist()
-print(len(X_train))
-# Use only the first 100 samples for quick test
-X_train, Y_train_oh = X_train, Y_train_oh
-X_test, y_test = X_test, y_test
+if __name__ == "__main__":
+    print("Loading testdata")
+    train_data, test_data = load_mnist()
 
-# Build training list for your train() function
-train_list = [(X_train[i], Y_train_oh[i]) for i in range(len(X_train))]
+    print("Training network")
+    nn = Model([28*28, 200, 100, 10])
+    scores = nn.gradient_descent(train_data, epochs=30, eta=0.5, return_score=True)
+    plot_scores(scores)
+    print("Testing accuracy")
+    acc = nn.eval_labeled(test_data)
+    print("Accuracy {}%".format(acc))
+    
 
-# --- Train ---
-net = Network(sizes=[784, 64, 10])
-net.train(0.5,train_list ,10, 10,)
-
-# --- Evaluate ---
-test_list = [(X_test[i], int(y_test[i])) for i in range(len(X_test))]
-acc = net.evaluate(test_list) / len(test_list)
-print(f"Test accuracy: {acc:.4f}")
