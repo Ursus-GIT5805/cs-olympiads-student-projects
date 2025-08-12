@@ -10,7 +10,7 @@ def sigmoid(x):
 def sigmoid_prime(x):
     sig = sigmoid(x)
     return sig * (1-sig)
-"""
+
 @jax.tree_util.register_dataclass
 @dataclass
 class SquaredMeanCost:
@@ -32,7 +32,6 @@ class CrossEntropyCost:
     @staticmethod
     def delta(_z, a, y):
         return a - y
-"""
 
 def make_batches(array, sz):
     n = len(array)
@@ -73,7 +72,8 @@ def backprop(
         sizes += 1
 
     # TODO make custom cost function at some point
-    delta = activations[-1] - label
+    delta = model.cost.delta(zs[-1], activations[-1], label)
+    # delta = activations[-1] - label
 
     err_b[-1] = delta
     err_w[-1] = jnp.matmul(delta, activations[-2].transpose())
@@ -127,7 +127,7 @@ class Model:
     num_layers: int
     biases: list[jnp.ndarray]
     weights: list[jnp.ndarray]
-    # cost: object # Cost function
+    cost: object # Cost function
     # activation: object # function
 
     def layered(layers):
@@ -150,7 +150,7 @@ class Model:
 
         return Model(
             num_layers=num_layers,
-            # cost=CrossEntropyCost,
+            cost=CrossEntropyCost(),
             weights=weights,
             biases=biases
         )
@@ -169,6 +169,7 @@ class Model:
     ):
         n = len(train_data)
 
+        scores = []
         for epoch in range(epochs):
             print("Epoch {}/{}".format(epoch+1, epochs))
 
@@ -185,7 +186,7 @@ class Model:
         # if(return_score):
             # return scores
 
-    def eval_labeled(
+    def evaluate(
         self,
         test_data
     ):
@@ -200,11 +201,13 @@ class Model:
 
         return score / len(test_data) * 100.0
 
-    # def loss(self, test_data):
+    def loss(self, test_data):
+        summ = 0.0
+        for data, label in test_data:
+            a = self.feed_forward(data)
+            summ += self.cost.fn(a, label)
 
-        # for data, label in test_data:
-            # summ+=singlecross(data,label, self.biases,self.weights)
-        # return -summ / len(test_data)
+        return -summ / len(test_data)
 
 if __name__ == "__main__":
     import loader
@@ -215,8 +218,8 @@ if __name__ == "__main__":
 
     nn.train(train_data, epochs=5)
 
-    # loss = nn.loss(test_data)
+    loss = nn.loss(test_data)
 
-    score = nn.eval_labeled(test_data)
-
+    score = nn.evaluate(test_data)
     print("Score: ", score)
+    print("Loss: ", loss)
