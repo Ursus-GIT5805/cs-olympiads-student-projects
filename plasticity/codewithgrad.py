@@ -10,10 +10,6 @@ import ml_datasets
 def sigmoid(z):
     return 1.0 / (1.0 + jnp.exp(-z))
 
-@jax.jit
-def sigmoid_prime(z):
-    s = sigmoid(z)
-    return s * (1.0 - s)
 
 @jax.jit
 def dotproduct(w, activation, b):
@@ -21,21 +17,12 @@ def dotproduct(w, activation, b):
     activation = sigmoid(z)
     return (z, activation)
 
-@jax.jit
-def seconddotproduct(delta, act):
-    return jnp.dot(delta, act.transpose())
-
-@jax.jit
-def backpropstep(delta, weights, activations, z):
-    delta = jnp.dot(weights.transpose(), delta) * sigmoid_prime(z)
-    updw = seconddotproduct(delta, activations)
-    return (delta, updw)
 
 def initialize_weights_biases(sizes):
     key = jax.random.PRNGKey(42)
     bias_keys = jax.random.split(key, len(sizes) - 1)
     weight_keys = jax.random.split(key, len(sizes) - 1)
-
+    params = ([],[])
     # biases: (layer_size, 1), for all layers except input
     biases = [jax.random.normal(k, shape=(y, 1)) for k, y in zip(bias_keys, sizes[1:])]
 
@@ -45,17 +32,19 @@ def initialize_weights_biases(sizes):
         jax.random.normal(k, shape=(x, y)) / jnp.sqrt(y)
         for k, (y, x) in zip(weight_keys, zip(sizes[:-1], sizes[1:]))
     ]
-    return (weights, biases)
+
+    return (weights,biases)
 
 @jax.jit
-def feedforward(a, weights, biases):
-    for b, w in zip(biases, weights):
+def feedforward(a, params):
+    weights,biases = params
+    for w,b in zip(weights,biases):
+
         _, a = dotproduct(w, a, b)
     return a
 
 def predict(params, x):
-    weights, biases = params
-    return feedforward(x, weights, biases)
+    return feedforward(x, params)
 
 def mse_loss(params, x, y):
     """Per-example 0.5 * ||f(x)-y||^2; shapes: x (784,1), y (10,1)."""
@@ -78,14 +67,14 @@ def update_batch_auto(params, batch_x, batch_y, lr):
     new_params = jax.tree_util.tree_map(lambda p, g: p - lr * g, params, mean_grads)
     return new_params
 
-def evaluate(test_data, weights, biases):
+def evaluate(test_data, params):
     """
     test_data: list of (x, y_idx) where y_idx is int class.
     Returns number correct.
     """
     correct = 0
     for x, y in test_data:
-        out = np.array(feedforward(x, weights, biases))  # move to host for argmax
+        out = np.array(feedforward(x, params))  # move to host for argmax
         pred = int(out.argmax(axis=0)) if out.ndim == 2 else int(out.argmax())
         if pred == y:
             correct += 1
@@ -93,29 +82,27 @@ def evaluate(test_data, weights, biases):
 
 # -------------------- training loop (uses autodiff) --------------------
 
-def update_batch(batch, eta, sizes, weights, biases):
+def update_batch(batch, eta, params):
     """
     Wraps the jitted autodiff update: stack list-of-tuples into batched arrays.
     """
     batch_x = jnp.stack([x for x, _ in batch], axis=0)  # (B, 784, 1)
     batch_y = jnp.stack([y for _, y in batch], axis=0)  # (B, 10, 1)
-    params = (weights, biases)
-    new_weights, new_biases = update_batch_auto(params, batch_x, batch_y, eta)
-    return (new_weights, new_biases)
+    params = update_batch_auto(params, batch_x, batch_y, eta)
+    return params
 
-def train(training_data, eta, epochs, batch_size, sizes, weights, biases, test_data=None):
+def train(training_data, eta, epochs, batch_size, params, test_data=None):
     n = len(training_data)
     for epoch in range(epochs):
         random.shuffle(training_data)
         batches = [training_data[k:k + batch_size] for k in range(0, n, batch_size)]
         for batch in batches:
-            weights, biases = update_batch(batch, eta, sizes, weights, biases)
-        if test_data:
-            score = evaluate(test_data, weights, biases) / len(test_data)
-            print(f"Epoch {epoch} complete with score {score:.4f}")
-        else:
+            params = update_batch(batch, eta, params)
             print(f"Epoch {epoch} complete")
-    return (weights, biases)
+    if test_data:
+        score = evaluate(test_data, params) / len(test_data)
+        print(f"score {score}")
+    return params
 
 # -------------------- utils & main --------------------
 
@@ -147,17 +134,15 @@ def main():
                      for x, y in zip(test_images, test_labels)]
 
     sizes = [784, 100, 40,  10]
-    weights, biases = initialize_weights_biases(sizes)
+    params = initialize_weights_biases(sizes)
 
     # Train with autodiff + jit
-    weights, biases = train(
+    params = train(
         training_data=training_data,
         eta=0.5,
         epochs=30,
         batch_size=10,
-        sizes=sizes,
-        weights=weights,
-        biases=biases,
+        params=params,
         test_data=test_data
     )
 
