@@ -1,6 +1,7 @@
 import jax
 # import numpy as jnp
 import jax.numpy as jnp
+from ml_datasets import mnist
 
 def sigmoid(x):
     return 1.0 / (1.0 + jnp.exp(-x))
@@ -10,10 +11,18 @@ def sigmoid_prime(x):
     return sig * (1-sig)
 
 def make_batches(array, sz):
+    n = len(array)
+
+    key = jax.random.PRNGKey(4)
+    perm = jax.random.permutation(key, n)
+
     i = 0
-    while i+sz < len(array):
-        yield array[i:i+sz]
+    while i+sz < n:
+        yield [array[idx] for idx in perm[i:i+sz]]
         i += sz
+
+    if i < n:
+        yield [array[idx] for idx in perm[i:]]
 
 @jax.jit
 def backprop(
@@ -92,16 +101,10 @@ def feedforward(a, biases, weights):
 class Model:
     def __init__(self, sizes):
         self.sizes = sizes
-
-        """
-        self.biases = [jnp.random.randn(y, 1) for y in sizes[1:]]
-        self.weights = [jnp.random.randn(y, x)
-                        for x, y in zip(sizes[:-1], sizes[1:])]
-        """
         keys_bias = jax.random.split(jax.random.PRNGKey(2), len(sizes)-1)
 
         self.biases = [
-            jax.random.uniform(k, shape=(shp,1), minval=0.0, maxval=1.0)
+            jax.random.normal(k, shape=(shp,1))
             for k, shp in zip(keys_bias, sizes[1:])
         ]
 
@@ -109,8 +112,8 @@ class Model:
         shapes = zip(sizes[1:], sizes[:-1])
 
         self.weights = [
-            jax.random.uniform(k, shape=shp, minval=0.0, maxval=1.0)
-            for k, shp in zip(keys_weights, shapes)
+            jax.random.normal(k, shape=(x,y)) / jnp.sqrt(x)
+            for k, (x,y) in zip(keys_weights, shapes)
         ]
 
     # Feed forward
@@ -129,12 +132,7 @@ class Model:
         for epoch in range(epochs):
             print("Epoch {}/{}".format(epoch+1, epochs))
 
-            key = jax.random.PRNGKey(4)
-
-            perm = jax.random.permutation(key, n)
-            shuffled_data = [train_data[i] for i in perm]
-
-            for batch in make_batches(shuffled_data, batch_size):
+            for batch in make_batches(train_data, batch_size):
                 self.biases, self.weights = update_to_batch(
                     self.biases,
                     self.weights,
@@ -160,15 +158,9 @@ class Model:
 # =====
 
 # import matplotlib.pyplot as plt
-from ml_datasets import mnist
 
 def load_mnist():
     (train_x, train_y), (test_x, test_y) = mnist()
-
-    # train_x = jnp.array(train_x)
-    # train_y = jnp.array(train_y)
-    # test_x = jnp.array(test_x)
-    # test_y = jnp.array(test_y)
 
     train_data = [
         (train_x[i].reshape(-1, 1), train_y[i].reshape(-1, 1))
@@ -181,8 +173,6 @@ def load_mnist():
     ]
 
     return train_data, test_data
-
-import loader
 
 def plot_sample(test):
     data, label = test
@@ -209,8 +199,8 @@ if __name__ == "__main__":
 
     print("Training network")
     nn = Model([28*28, 200, 100, 10])
-    nn.gradient_descent(train_data, epochs=10, eta=0.5)
+    nn.gradient_descent(train_data, epochs=3, eta=0.5)
 
     print("Testing accuracy")
-    acc = nn.eval_labeled(train_data)
+    acc = nn.eval_labeled(test_data)
     print("Accuracy {}%".format(acc))
