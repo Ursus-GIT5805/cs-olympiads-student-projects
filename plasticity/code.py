@@ -130,8 +130,8 @@ def main():
     sizes = [784, 60,10]
     weights, biases = initialize_weights_biases(sizes)
     weights, biases = train(training_data,0.5,30,10,sizes,weights,biases,test_data)
-    acc = evaluate(test_data,weights,biases) / len(test_data)
-    print(acc)
+    # acc = evaluate(test_data,weights,biases) / len(test_data)
+    # print(acc)
     
 if __name__ == "__main__":
     main()
