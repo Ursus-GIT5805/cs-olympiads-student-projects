@@ -1,18 +1,18 @@
+import loader
+import matplotlib.pyplot as plt
+from linear import *
+from model import *
+
+import random
+
 if __name__ == "__main__":
-    import loader 
-    import matplotlib.pyplot as plt
-    from linear import *
-    from model import * 
     key = jax.random.PRNGKey(42)
 
-    params_teacher = [
-        linear(784, 100, key),
-        linear(100, 100, key),
-        linear(100, 100, key),
-        linear(100, 10, key),
-    ]
+    params_teacher = linears_from_array([784, 100, 100, 100, 10])
+
     params_student = params_teacher.copy()
     original_params = params_teacher.copy()
+
     def run(params, a):
         a = feedforward_linear(params[0], a)
         a = jax.nn.sigmoid(a)
@@ -52,72 +52,66 @@ if __name__ == "__main__":
         original_params,
         jax.jit(run)
     )
-    teacher_epochs = 20
+
     student_accs = []
     teacher_accs = []
     acc_student = 0
-    student_epochs_per_teacher_epoch = 1
+    teacher_epochs = 10
+    student_epochs_per_teacher_epoch = 10
+
     for teacher_epoch in range(teacher_epochs):
         print(f"Global epoch  {teacher_epoch}:")
         print("Teacher Epochs:")
+
         teacher.train(
             train_teacher_x, train_teacher_y,
             epochs=1, batch_size=100,
             optimizer=optax.sgd(learning_rate=0.5),
-            teacher_epoch=teacher_epoch
+            seed=random.randint(0, int(1e9)),
+            batches=100
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
+
         train_student_y = teacher.evaluate(train_student_x)
         print("Student Epochs:")
+
         student.train(
             train_student_x, train_student_y,
             epochs=student_epochs_per_teacher_epoch, batch_size=100,
             optimizer=optax.sgd(learning_rate=0.5),
-            teacher_epoch=teacher_epoch
+            seed=random.randint(0, int(1e9)),
+            batches=10
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
         test_teacher_y = teacher.evaluate(test_x)
         # acc_teacher = teacher.accuracy(test_x,test_y)
-        acc_student = student.accuracy(test_x,test_teacher_y)
-        # print("Accuracy Teacher: {}%".format(acc_teacher))
+
+        acc_student = student.accuracy(test_x, test_teacher_y)
         print("Accuracy Student: {}%".format(acc_student))
-        # teacher_accs.append(acc_teacher)
         student_accs.append(acc_student)
         print()
-   
+
     train_student_y = teacher.evaluate(train_student_x)
     student2.train(
-            train_student_x, train_student_y,
-            epochs=student_epochs_per_teacher_epoch*teacher_epochs, batch_size=100,
-            optimizer=optax.sgd(learning_rate=0.5),
-            # return_score=True,
-            # evaluate=(test_x, test_y)
-        )
+        train_student_x, train_student_y,
+        epochs=200, batch_size=100,
+        optimizer=optax.sgd(learning_rate=0.5),
+        seed=random.randint(0, int(1e9)),
+        batches=10
+        # return_score=True,
+        # evaluate=(test_x, test_y)
+    )
+
     test_teacher_y = teacher.evaluate(test_x)
+
     acc_student2 = student2.accuracy(test_x,test_teacher_y)
     print("Accuracy Second Student: {}%".format(acc_student2))
-    acc_student2_vs_student1 = (acc_student/acc_student2)*100
-    print("Accuracy First Student vs Second Student: {}%".format(acc_student2_vs_student1))
+
+    acc_student2_vs_student1 = (acc_student/acc_student2)
+    print("Accuracy First Student is {} better than the second Student".format(acc_student2_vs_student1))
+
     plt.plot(student_accs)
     plt.grid()
     plt.show()
-    # print("Loss {}".format(model.loss(test_x, test_y)))
-
-    # scores = model.train(
-    #     train_x, train_y,
-    #     epochs=20, batch_size=100,
-    #     optimizer=optax.sgd(learning_rate=0.5),
-    #     return_score=True,
-    #     # evaluate=(test_x, test_y)
-    #     evaluate=(test_x, test_y)
-    # )
-
-    # plt.plot(scores)
-    # plt.show()
-
-    # acc_train = model.accuracy(train_x, train_y)
-    # acc_test = model.accuracy(test_x, test_y)
-    # print("Accuracy Training: {}%".format(acc_train))
-    # print("Accuracy Test: {}%".format(acc_test))
