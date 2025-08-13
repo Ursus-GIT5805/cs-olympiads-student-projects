@@ -32,7 +32,7 @@ def _gen_loss_function(run, cost):
     return jax.jit(loss_fn)
 
 @partial(jax.jit, static_argnames=('optimizer', 'loss_fn'))
-def _optimize(params, opt_state, x, y, optimizer, loss_fn):
+def train_step(params, opt_state, x, y, optimizer, loss_fn):
     loss, grads = jax.value_and_grad(loss_fn)(params, x, y)
     updates, opt_state = optimizer.update(grads, opt_state, params)
     params = optax.apply_updates(params, updates)
@@ -108,7 +108,7 @@ class Model:
             for i in range(0, n, batch_size):
                 tx, ty = train_x[i : i+batch_size], train_y[i : i+batch_size]
 
-                self.params, opt_state, loss = _optimize(
+                self.params, opt_state, loss = train_step(
                     self.params,
                     opt_state,
                     tx,
@@ -151,60 +151,5 @@ class Model:
 
         return jnp.sum(a_label == t_label) / test_x.shape[0] * 100
 
-if __name__ == "__main__":
-    import loader
-    import matplotlib.pyplot as plt
-    from linear import *
-
-    key = jax.random.PRNGKey(42)
-    params = [
-        linear(784, 100, key),
-        linear(100, 100, key),
-        linear(100, 100, key),
-        linear(100, 10, key),
-    ]
-    def run(params, a):
-        a = feedforward_linear(params[0], a)
-        a = jax.nn.sigmoid(a)
-
-        a = feedforward_linear(params[1], a)
-        # a = jax.nn.sigmoid(a)
-        a = batch_norm(a)
-        a = jax.nn.relu(a)
-
-        a = feedforward_linear(params[2], a)
-        a = jax.nn.sigmoid(a)
-        # a = batch_norm(a)
-        # a = jax.nn.relu(a)
-
-        a = feedforward_linear(params[3], a)
-        a = jax.nn.softmax( a )
-        return a
-
-    train_data, test_data = loader.load_mnist_raw()
-
-    train_x, train_y = train_data
-    test_x, test_y = test_data
-
-    model = Model.init(
-        params,
-        jax.jit(run),
-    )
-
-    print("Loss {}".format(model.loss(test_x, test_y)))
-
-    scores = model.train(
-        train_x, train_y,
-        epochs=5, batch_size=10,
-        optimizer=optax.sgd(learning_rate=0.5),
-        return_score=True,
-        evaluate=(test_x, test_y)
-    )
-
-    plt.plot(scores)
-    plt.show()
-
-    acc_train = model.accuracy(train_x, train_y)
-    acc_test = model.accuracy(test_x, test_y)
-    print("Accuracy Training: {}%".format(acc_train))
-    print("Accuracy Test: {}%".format(acc_test))
+    def save_to(path):
+        with open(path, "w+") as f:
