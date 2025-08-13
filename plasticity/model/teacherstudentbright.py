@@ -2,7 +2,7 @@ import loader
 import matplotlib.pyplot as plt
 from linear import *
 from model import *
-import math
+
 import random
 
 if __name__ == "__main__":
@@ -10,6 +10,7 @@ if __name__ == "__main__":
 
     params_teacher = [
         linear(784, 100, key),
+        linear(100, 100, key),
         linear(100, 100, key),
         linear(100, 100, key),
         linear(100, 10, key),
@@ -21,13 +22,13 @@ if __name__ == "__main__":
 
     def run(params, a):
         a = feedforward_linear(params[0], a)
+        a = jax.nn.relu(a)
 
         x1 = a.copy()
 
-        a = jax.nn.sigmoid(a)
-        a = feedforward_linear(params[1], a)
         a = batch_norm(a)
         a = jax.nn.relu(a)
+        a = feedforward_linear(params[1], a)
 
         a = feedforward_linear(params[2], a)
         a = batch_norm(a)
@@ -36,6 +37,9 @@ if __name__ == "__main__":
         a = jax.nn.relu(a)
 
         a = feedforward_linear(params[3], a)
+        a = jax.nn.sigmoid( a )
+
+        a = feedforward_linear(params[4], a)
         a = jax.nn.softmax( a )
         return a
 
@@ -61,7 +65,7 @@ if __name__ == "__main__":
     student_accs = []
     latestudents_accs = []
     acc_student = 0
-    teacher_epochs = 20
+    teacher_epochs = 50
     student_epochs_per_teacher_epoch = 10
 
     for teacher_epoch in range(teacher_epochs):
@@ -91,15 +95,12 @@ if __name__ == "__main__":
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
-        random_noise_test = jax.random.uniform(key, shape=(6000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
-
-        test_teacher_y = teacher.evaluate(random_noise_test)
-        # test_teacher_y = teacher.evaluate(test_x)
+        test_teacher_y = teacher.evaluate(test_x)
         # acc_teacher = teacher.accuracy(test_x,test_y)
-        test_student_y = student.evaluate(random_noise_test)
-        kl_student = kl_divergence(test_teacher_y,test_student_y)
-        print("Kl student: {}%".format(kl_student))
-        student_accs.append(kl_student)
+
+        acc_student = student.accuracy(test_x, test_teacher_y)
+        print("Accuracy Student: {}%".format(acc_student))
+        student_accs.append(acc_student)
 
         thparams = original_params.copy()
         studenth = Model.init(
@@ -115,10 +116,8 @@ if __name__ == "__main__":
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
-        test_student_y = studenth.evaluate(random_noise_test)
-        kl_student = kl_divergence(test_teacher_y,test_student_y)
-        print("Bright student KL {}".format(kl_student))
-        latestudents_accs.append(kl_student)
+        acc_studenth = studenth.accuracy(test_x, test_teacher_y)
+        print("Accuracy Bright Student: {}%".format(acc_studenth))
         print()
 
     train_student_y = teacher.evaluate(train_student_x)
@@ -138,7 +137,7 @@ if __name__ == "__main__":
     print("Accuracy Second Student: {}%".format(acc_student2))
 
     acc_student2_vs_student1 = (acc_student2-acc_student)
-    print("Accuracy Second Student is {} better than the first Student".format(acc_student2_vs_student1))
+    print("Accuracy Sedond Student is {} better than the first Student".format(acc_student2_vs_student1))
     
     plt.plot(student_accs)
     plt.plot(latestudents_accs)
