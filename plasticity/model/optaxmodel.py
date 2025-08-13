@@ -5,76 +5,75 @@ import optax
 from dataclasses import dataclass
 from functools import partial
 
+"""
 # Example of a resnet block
 @jax.jit
 def resnet_block(a, w1, b1, w2, b2):
-    # First transformation
     z1 = jnp.dot(a, w1) + b1
-    h1 = jax.nn.relu(z1)
-    # Second transformation
-    z2 = jnp.dot(h1, w2) + b2
-    # Skip connection
+    a = jax.nn.relu(z1)
+    z2 = jnp.dot(a, w2) + b2
     return a + z2
+"""
+# =====
 
 @jax.jit
-def forward(params, a):
-    for w, b in params[:-1]:
-        z = jnp.dot(a, w) + b
-        a = jax.nn.relu(z)
-    w, b = params[-1]
-    z = jnp.dot(a, w) + b
-    a = jax.nn.log_softmax(z)
-    return a, z
+def crossentropy_cost(a, y):
+    return jnp.sum(jnp.nan_to_num(-y * jnp.log(a) - (1-y) * jnp.log1p(-a)))
 
-@jax.jit
-def crossentropy_cost(a, y, z):
-    return -jnp.mean(jnp.sum(y * a, axis=1))
+# ===== Training =====
 
 def gen_loss_function(run, cost):
     def loss_fn(params, x, y):
-        a, z = forward(params, x)
-        return cost(a, y, z)
+        a = run(params, x)
+        return cost(a, y)
 
     return jax.jit(loss_fn)
 
 @partial(jax.jit, static_argnames=('optimizer', 'loss_fn'))
-def train_step(params, opt_state, x, y, optimizer, loss_fn):
-    loss, grads = jax.value_and_grad(loss_fn)(params, x, y)
+def optimize(params, opt_state, x, y, optimizer, loss_fn):
+    grads = jax.grad(loss_fn)(params, x, y)
     updates, opt_state = optimizer.update(grads, opt_state, params)
     params = optax.apply_updates(params, updates)
-    return params, opt_state, loss
+    return params, opt_state
 
-# =====
-
-def init_layer_params(input_dim, output_dim, key):
-    w_key, b_key = jax.random.split(key)
-    weight = jax.random.normal(w_key, (input_dim, output_dim)) / jnp.sqrt(input_dim)
-    bias = jax.random.normal(b_key, (output_dim,))
-    return weight, bias
+# ===== Model =====
 
 @jax.tree_util.register_dataclass
 @dataclass
 class Model:
-    num_layers: int
+    input_dim: int
+    output_dim: int
     params: object
-    cost: object # Cost function
-    # activation: object # function
+    forward: object
 
     @staticmethod
-    def init(arr):
-        key = jax.random.PRNGKey(len(arr))
-
-        keys = jax.random.split(key, len(arr) - 1)
-        params = [init_layer_params(m, n, k) for m, n, k in zip(arr[:-1], arr[1:], keys)]
-
+    def init(
+        params,
+        forward,
+        input_dim=None,
+        output_dim=None,
+    ):
         return Model(
-            num_layers=len(arr),
+            input_dim=input_dim,
+            output_dim=output_dim,
             params=params,
-            cost=crossentropy_cost,
+            forward=forward,
         )
 
-    def run(self, a):
-        return forward(self.params, a)
+    def assert_data_shape(self, x, y):
+        n = x.shape[0]
+
+        if self.input_dim and train_x.shape != (n, self.input_dim):
+            raise ValueError(
+                "Input most be of shape {}, not {}"
+                .format((n, self.input_dim), x.shape)
+            )
+
+        if self.output_dim and y.shape != (n, self.output_dim):
+            raise ValueError(
+                "Output most be of shape {}, not {}"
+                .format(n, self.output_dim, y.shape)
+            )
 
     def train(
         self,
@@ -82,16 +81,21 @@ class Model:
         train_y,
         epochs=10,
         batch_size=128,
-        eta=0.01,
-        return_score=False
+        optimizer=optax.sgd(learning_rate=0.01),
+        cost=crossentropy_cost,
+        evaluate=None # Return a list of losses per epoch
     ):
         n = train_x.shape[0]
-        optimizer = optax.sgd(learning_rate=eta)
         opt_state = optimizer.init(self.params)
 
-        scores = []
+        self.assert_data_shape(train_x, train_y)
 
-        loss_fn = gen_loss_function(forward, self.cost)
+        scores = []
+        loss_fn = gen_loss_function(self.forward, cost)
+
+        if evaluate:
+            tx, ty = evaluate
+            self.assert_data_shape(tx, ty)
 
         for epoch in range(epochs):
             print("Epoch {}/{}".format(epoch+1, epochs))
@@ -102,7 +106,7 @@ class Model:
             for i in range(0, n, batch_size):
                 tx, ty = train_x[i : i+batch_size], train_y[i : i+batch_size]
 
-                self.params, opt_state, loss = train_step(
+                self.params, opt_state = optimize(
                     self.params,
                     opt_state,
                     tx,
@@ -111,10 +115,12 @@ class Model:
                     loss_fn,
                 )
 
-                if return_score:
-                    scores.append(loss)
+            if evaluate:
+                loss, _ = jax.value_and_grad(loss_fn)(self.params, tx, ty)
+                scores.append(loss)
+                print("Loss: {}".format(loss))
 
-        if return_score:
+        if evaluate:
             return scores
 
     def accuracy(
@@ -122,32 +128,38 @@ class Model:
         test_x,
         test_y,
     ):
-        a, _ = self.run(test_x)
+        self.assert_data_shape(test_x, test_y)
+
+        a = self.forward(self.params, test_x)
 
         a_label = jnp.argmax(a, axis=1)
         t_label = jnp.argmax(test_y, axis=1)
 
         return jnp.sum(a_label == t_label) / test_x.shape[0] * 100
 
-import matplotlib.pyplot as plt
-
-def plot_scores(scores):
-    plt.plot(scores)
-    plt.grid()
-    plt.show()
-
 if __name__ == "__main__":
     import loader
+    from linear import *
 
-    model = Model.init([784, 200, 100, 10])
+    params = linears_from_array([784, 200, 100, 10])
+
+    def run(params, a):
+        for param in params:
+            z = feedforward_linear(param, a)
+            a = jax.nn.sigmoid(z)
+        return a
+
+    model = Model.init(params, jax.jit(run))
     train_data, test_data = loader.load_mnist_raw()
 
     train_x, train_y = train_data
-
-    scores = model.train(train_x, train_y, epochs=10, batch_size=10, return_score=True)
-    # plot_scores(scores)
-
     test_x, test_y = test_data
 
+    scores = model.train(
+        train_x, train_y,
+        epochs=10, batch_size=10,
+        # evaluate=(test_x[:1000], test_y[:1000])
+    )
+
     acc = model.accuracy(test_x, test_y)
-    print("Accuracy", acc)
+    print("Accuracy: {}%".format(acc))

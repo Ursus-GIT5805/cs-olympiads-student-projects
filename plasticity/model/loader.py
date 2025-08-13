@@ -15,3 +15,6 @@ def load_mnist():
     ]
 
     return train_data, test_data
+
+def load_mnist_raw():
+    return mnist()
