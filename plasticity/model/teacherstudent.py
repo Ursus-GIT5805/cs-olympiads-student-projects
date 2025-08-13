@@ -5,6 +5,17 @@ if __name__ == "__main__":
     from model import * 
     key = jax.random.PRNGKey(42)
 
+
+# Generate N seeds
+    n_seeds = int(1e5)
+    keys_seeds = jax.random.split(key, n_seeds)
+    keys = [int(k[0]) for k in keys_seeds]
+
+    seed_index=-1
+    def get_seed():
+        global seed_index  
+        seed_index+=1
+        return keys[seed_index]
     params_teacher = [
         linear(784, 100, key),
         linear(100, 100, key),
@@ -64,7 +75,7 @@ if __name__ == "__main__":
             train_teacher_x, train_teacher_y,
             epochs=1, batch_size=100,
             optimizer=optax.sgd(learning_rate=0.5),
-            teacher_epoch=teacher_epoch
+            seed=get_seed()
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
@@ -74,7 +85,7 @@ if __name__ == "__main__":
             train_student_x, train_student_y,
             epochs=student_epochs_per_teacher_epoch, batch_size=100,
             optimizer=optax.sgd(learning_rate=0.5),
-            teacher_epoch=teacher_epoch
+            seed=get_seed(),
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
@@ -92,6 +103,7 @@ if __name__ == "__main__":
             train_student_x, train_student_y,
             epochs=student_epochs_per_teacher_epoch*teacher_epochs, batch_size=100,
             optimizer=optax.sgd(learning_rate=0.5),
+            seed=get_seed()
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
