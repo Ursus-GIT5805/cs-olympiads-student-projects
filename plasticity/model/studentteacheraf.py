@@ -116,8 +116,8 @@ if __name__ == '__main__':
     random_noise_test = jax.random.uniform(key, shape=(600000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
 
     teacher_data = model_teacher.evaluate(random_noise_test)
-    acc_stud_follow_teacher = model_student_along.accuracy(test_x, teacher_data)
-    acc_stud_final_teacher = model_student_final.accuracy(test_x, teacher_data)
+    acc_stud_follow_teacher = model_student_along.accuracy(random_noise_test, teacher_data)
+    acc_stud_final_teacher = model_student_final.accuracy(random_noise_test, teacher_data)
 
     print("Accuracy of following student-teacher: {}".format(acc_stud_follow_teacher))
     print("Accuracy of final student-teacher: {}".format(acc_stud_final_teacher))
