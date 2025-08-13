@@ -5,20 +5,22 @@ import optax
 from dataclasses import dataclass
 from functools import partial
 
-"""
-# Example of a resnet block
 @jax.jit
-def resnet_block(a, w1, b1, w2, b2):
-    z1 = jnp.dot(a, w1) + b1
-    a = jax.nn.relu(z1)
-    z2 = jnp.dot(a, w2) + b2
-    return a + z2
-"""
+def batch_norm(x):
+    mean = jnp.mean(x)
+    var = jnp.var(x)
+    return jnp.nan_to_num((x-mean) / jnp.sqrt(var))
+
 # =====
 
 @jax.jit
 def crossentropy_cost(a, y):
-    return jnp.sum(jnp.nan_to_num(-y * jnp.log(a) - (1-y) * jnp.log1p(-a)))
+    eps = 1e-6
+    return jnp.sum(-y * jnp.log(a+eps) - (1-y) * jnp.log1p(-a+eps))
+
+@jax.jit
+def squaredmean_cost(a, y):
+    return jnp.sum( (a-y) ** 2 )
 
 # ===== Training =====
 
@@ -31,10 +33,10 @@ def _gen_loss_function(run, cost):
 
 @partial(jax.jit, static_argnames=('optimizer', 'loss_fn'))
 def _optimize(params, opt_state, x, y, optimizer, loss_fn):
-    grads = jax.grad(loss_fn)(params, x, y)
+    loss, grads = jax.value_and_grad(loss_fn)(params, x, y)
     updates, opt_state = optimizer.update(grads, opt_state, params)
     params = optax.apply_updates(params, updates)
-    return params, opt_state
+    return params, opt_state, loss
 
 # ===== Model =====
 
@@ -62,13 +64,13 @@ class Model:
     def assert_data_shape(self, x, y):
         n = x.shape[0]
 
-        if self.input_dim and train_x.shape != (n, self.input_dim):
+        if self.input_dim and (train_x.shape != (n, self.input_dim)):
             raise ValueError(
                 "Input most be of shape {}, not {}"
                 .format((n, self.input_dim), x.shape)
             )
 
-        if self.output_dim and y.shape != (n, self.output_dim):
+        if self.output_dim and (y.shape != (n, self.output_dim)):
             raise ValueError(
                 "Output most be of shape {}, not {}"
                 .format(n, self.output_dim, y.shape)
@@ -82,6 +84,7 @@ class Model:
         batch_size=128,
         optimizer=optax.sgd(learning_rate=0.01),
         cost=crossentropy_cost,
+        return_score=False,
         evaluate=None # Return a list of losses per epoch
     ):
         n = train_x.shape[0]
@@ -99,13 +102,13 @@ class Model:
         for epoch in range(epochs):
             print("Epoch {}/{}".format(epoch+1, epochs))
 
-            perm = jax.random.permutation(jax.random.PRNGKey(epoch), n)
-            train_x, train_y = train_x[perm], train_y[perm]
+            # perm = jax.random.permutation(jax.random.PRNGKey(epoch), n)
+            # train_x, train_y = train_x[perm], train_y[perm]
 
             for i in range(0, n, batch_size):
                 tx, ty = train_x[i : i+batch_size], train_y[i : i+batch_size]
 
-                self.params, opt_state = _optimize(
+                self.params, opt_state, loss = _optimize(
                     self.params,
                     opt_state,
                     tx,
@@ -114,13 +117,24 @@ class Model:
                     loss_fn,
                 )
 
+                if return_score: scores.append(loss)
+
             if evaluate:
                 loss, _ = jax.value_and_grad(loss_fn)(self.params, tx, ty)
-                scores.append(loss)
                 print("Loss: {}".format(loss))
 
-        if evaluate:
+        if return_score:
             return scores
+
+    def loss(
+        self,
+        tx,
+        ty,
+        cost=crossentropy_cost,
+    ):
+        loss_fn = _gen_loss_function(self.forward, cost)
+        loss, _ = jax.value_and_grad(loss_fn)(self.params, tx, ty)
+        return loss
 
     def accuracy(
         self,
@@ -138,31 +152,57 @@ class Model:
 
 if __name__ == "__main__":
     import loader
+    import matplotlib.pyplot as plt
     from linear import *
 
-    params = linears_from_array([784, 200, 100, 10])
-
+    key = jax.random.PRNGKey(42)
+    params = [
+        linear(784, 100, key),
+        linear(100, 100, key),
+        linear(100, 100, key),
+        linear(100, 10, key),
+    ]
     def run(params, a):
-        for param in params:
-            z = feedforward_linear(param, a)
-            a = jax.nn.sigmoid(z)
-        return a
+        a = feedforward_linear(params[0], a)
+        a = jax.nn.sigmoid(a)
 
-    model = Model.init(
-        params,
-        jax.jit(run)
-    )
+        a = feedforward_linear(params[1], a)
+        a = jax.nn.sigmoid(a)
+        # a = batch_norm(a)
+        # a = jax.nn.relu(a)
+
+        a = feedforward_linear(params[2], a)
+        a = jax.nn.sigmoid(a)
+        # a = batch_norm(a)
+        # a = jax.nn.relu(a)
+
+        a = feedforward_linear(params[3], a)
+        a = jax.nn.softmax( a )
+        return a
 
     train_data, test_data = loader.load_mnist_raw()
 
     train_x, train_y = train_data
     test_x, test_y = test_data
 
-    scores = model.train(
-        train_x, train_y,
-        epochs=10, batch_size=10,
-        # evaluate=(test_x[:1000], test_y[:1000])
+    model = Model.init(
+        params,
+        jax.jit(run),
     )
 
-    acc = model.accuracy(test_x, test_y)
-    print("Accuracy: {}%".format(acc))
+    print("Loss {}".format(model.loss(test_x, test_y)))
+
+    scores = model.train(
+        train_x, train_y,
+        epochs=20, batch_size=100,
+        return_score=True,
+        # evaluate=(test_x, test_y)
+    )
+
+    plt.plot(scores)
+    plt.show()
+
+    acc_train = model.accuracy(train_x, train_y)
+    acc_test = model.accuracy(test_x, test_y)
+    print("Accuracy Training: {}%".format(acc_train))
+    print("Accuracy Test: {}%".format(acc_test))

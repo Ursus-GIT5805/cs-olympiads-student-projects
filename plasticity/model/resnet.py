@@ -9,7 +9,7 @@ def linear(input_dim, output_dim, key):
     """
     w_key, b_key = jax.random.split(key)
     weight = jax.random.normal(w_key, (input_dim, output_dim)) / jnp.sqrt(input_dim)
-    bias = jax.random.normal(b_key, (output_dim))
+    bias = jax.random.normal(b_key, (output_dim,))
 
     return weight, bias
 
