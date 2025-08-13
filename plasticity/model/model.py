@@ -85,7 +85,8 @@ class Model:
         optimizer=optax.sgd(learning_rate=0.01),
         cost=crossentropy_cost,
         return_score=False,
-        evaluate=None # Return a list of losses per epoch
+        evaluate=None, # Return a list of losses per epoch
+        teacher_epoch=0
     ):
         n = train_x.shape[0]
         opt_state = optimizer.init(self.params)
@@ -102,7 +103,7 @@ class Model:
         for epoch in range(epochs):
             print("Epoch {}/{}".format(epoch+1, epochs))
 
-            perm = jax.random.permutation(jax.random.PRNGKey(epoch), n)
+            perm = jax.random.permutation(jax.random.PRNGKey(teacher_epoch*epochs+epoch), n)
             train_x, train_y = train_x[perm], train_y[perm]
 
             for i in range(0, n, batch_size):

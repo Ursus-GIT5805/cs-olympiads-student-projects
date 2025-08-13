@@ -55,6 +55,8 @@ if __name__ == "__main__":
     teacher_epochs = 20
     student_accs = []
     teacher_accs = []
+    acc_student = 0
+    student_epochs_per_teacher_epoch = 1
     for teacher_epoch in range(teacher_epochs):
         print(f"Global epoch  {teacher_epoch}:")
         print("Teacher Epochs:")
@@ -62,6 +64,7 @@ if __name__ == "__main__":
             train_teacher_x, train_teacher_y,
             epochs=1, batch_size=100,
             optimizer=optax.sgd(learning_rate=0.5),
+            teacher_epoch=teacher_epoch
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
@@ -69,8 +72,9 @@ if __name__ == "__main__":
         print("Student Epochs:")
         student.train(
             train_student_x, train_student_y,
-            epochs=1, batch_size=100,
+            epochs=student_epochs_per_teacher_epoch, batch_size=100,
             optimizer=optax.sgd(learning_rate=0.5),
+            teacher_epoch=teacher_epoch
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
@@ -86,16 +90,16 @@ if __name__ == "__main__":
     train_student_y = teacher.evaluate(train_student_x)
     student2.train(
             train_student_x, train_student_y,
-            epochs=teacher_epochs, batch_size=100,
+            epochs=student_epochs_per_teacher_epoch*teacher_epochs, batch_size=100,
             optimizer=optax.sgd(learning_rate=0.5),
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
     test_teacher_y = teacher.evaluate(test_x)
-    acc_student = student2.accuracy(test_x,test_teacher_y)
-    print("Accuracy Second Student: {}%".format(acc_student))
-
-
+    acc_student2 = student2.accuracy(test_x,test_teacher_y)
+    print("Accuracy Second Student: {}%".format(acc_student2))
+    acc_student2_vs_student1 = (acc_student/acc_student2)*100
+    print("Accuracy First Student vs Second Student: {}%".format(acc_student2_vs_student1))
     plt.plot(student_accs)
     plt.grid()
     plt.show()
