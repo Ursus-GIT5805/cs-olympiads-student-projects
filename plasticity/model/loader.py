@@ -42,7 +42,7 @@ def load_cifar10(path: str):
     return None
 
 def load_mnist_teacher_student():
-    (train_x, train_y), (test_x, test_y) = mnist()
+    (train_x, train_y), (test_x, test_y) = ml_datasets.mnist()
     train_teacher_x = train_x[:30000]
     train_teacher_y = train_y[:30000]
     train_student_x = train_x[30000:]
