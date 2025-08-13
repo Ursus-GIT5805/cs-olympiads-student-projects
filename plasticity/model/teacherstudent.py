@@ -67,7 +67,7 @@ if __name__ == "__main__":
     student_accs = []
     teacher_accs = []
     acc_student = 0
-    student_epochs_per_teacher_epoch = 1
+    student_epochs_per_teacher_epoch = 100
     for teacher_epoch in range(teacher_epochs):
         print(f"Global epoch  {teacher_epoch}:")
         print("Teacher Epochs:")
@@ -75,7 +75,8 @@ if __name__ == "__main__":
             train_teacher_x, train_teacher_y,
             epochs=1, batch_size=100,
             optimizer=optax.sgd(learning_rate=0.5),
-            seed=get_seed()
+            seed=get_seed(),
+            batches=10
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
@@ -86,6 +87,7 @@ if __name__ == "__main__":
             epochs=student_epochs_per_teacher_epoch, batch_size=100,
             optimizer=optax.sgd(learning_rate=0.5),
             seed=get_seed(),
+            batches=10
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
@@ -101,9 +103,10 @@ if __name__ == "__main__":
     train_student_y = teacher.evaluate(train_student_x)
     student2.train(
             train_student_x, train_student_y,
-            epochs=student_epochs_per_teacher_epoch*teacher_epochs, batch_size=100,
+            epochs=200, batch_size=100,
             optimizer=optax.sgd(learning_rate=0.5),
-            seed=get_seed()
+            seed=get_seed(),
+            batches=10
             # return_score=True,
             # evaluate=(test_x, test_y)
         )

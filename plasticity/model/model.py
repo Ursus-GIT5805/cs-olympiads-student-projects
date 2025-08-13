@@ -86,7 +86,8 @@ class Model:
         cost=crossentropy_cost,
         return_score=False,
         evaluate=None, #     Return a list of losses per epoch
-        seed=None
+        seed=None,
+        batches=1e6
     ):
         n = train_x.shape[0]
         opt_state = optimizer.init(self.params)
@@ -106,7 +107,7 @@ class Model:
             perm = jax.random.permutation(jax.random.PRNGKey(seed if seed else epoch), n)
             train_x, train_y = train_x[perm], train_y[perm]
 
-            for i in range(0, n, batch_size):
+            for i in range(0, min(n,batch_size*batches), batch_size):
                 tx, ty = train_x[i : i+batch_size], train_y[i : i+batch_size]
 
                 self.params, opt_state, loss = train_step(
