@@ -19,7 +19,7 @@ def kl_divergence(p, q):
     eps=1e-12
     p = jnp.clip(p, eps, 1.0)
     q = jnp.clip(q, eps, 1.0)
-    return jnp.sum(p * (jnp.log(p) - jnp.log(q)))
+    return jnp.mean(p * (jnp.log(p) - jnp.log(q)))
 
 # =====
 
