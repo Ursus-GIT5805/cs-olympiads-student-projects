@@ -17,21 +17,22 @@ import copy
 def create_model(params):
     def run(params, a):
         a = feedforward_linear(params[0], a)
-        a = jax.nn.sigmoid(a)
 
+        x1 = a.copy()
+
+        a = jax.nn.sigmoid(a)
         a = feedforward_linear(params[1], a)
-        # a = jax.nn.sigmoid(a)
         a = batch_norm(a)
         a = jax.nn.relu(a)
 
         a = feedforward_linear(params[2], a)
-        # a = jax.nn.sigmoid(a)
         a = batch_norm(a)
+
+        a = a + x1
         a = jax.nn.relu(a)
 
         a = feedforward_linear(params[3], a)
-        a = jax.nn.softmax( a )
-
+        a = jax.nn.softmax(a)
         return a
 
     return Model.init(
@@ -40,8 +41,9 @@ def create_model(params):
     )
 
 if __name__ == '__main__':
-    teacher_epochs=5
-    student_epochs_ratio=10
+    teacher_epochs = 5
+    student_epochs_ratio = 10
+    student_final_epochs = 50
     noise_amount_step = 70000
 
     key = jax.random.PRNGKey(69420)
@@ -67,7 +69,7 @@ if __name__ == '__main__':
         print("teacher")
         model_teacher.train(
             train_x, train_y,
-            epochs=1, batch_size=10,
+            epochs=1, batch_size=50,
             optimizer=optax.sgd(learning_rate=0.5),
             return_score=False,
             evaluate=(test_x, test_y),
@@ -82,15 +84,20 @@ if __name__ == '__main__':
 
         model_student_along.train(
             random_noise_step, train_student_y,
-            epochs=student_epochs_ratio, batch_size=10,
+            epochs=student_epochs_ratio, batch_size=50,
             optimizer = optax.sgd(learning_rate=0.5),
             return_score=False,
             evaluate=(test_x, test_y),
             teacher_epoch=epoch
         )
-
-
-
+    train_student_y_final = model_teacher.evaluate(random_noise)
+    model_student_final.train(
+        random_noise, train_student_y_final,
+        epochs=student_final_epochs, batch_size=50,
+        optimizer = optax.sgd(learning_rate=0.5),
+        return_score=False,
+        evaluate=(test_x, test_y),
+    )
 
     acc_train = model_teacher.accuracy(train_x, train_y)
     acc_test = model_teacher.accuracy(test_x, test_y)
@@ -101,3 +108,15 @@ if __name__ == '__main__':
     acc_test = model_student_along.accuracy(test_x, test_y)
     print("Accuracy student Training: {}%".format(acc_train))
     print("Accuracy student Test: {}%".format(acc_test))
+
+    acc_train = model_student_final.accuracy(train_x, train_y)
+    acc_test = model_student_final.accuracy(test_x, test_y)
+    print("Accuracy student final Training: {}%".format(acc_train))
+    print("Accuracy student final Test: {}%".format(acc_test))
+
+    teacher_data = model_teacher.evaluate(test_x)
+    acc_stud_follow_teacher = model_student_along.accuracy(test_x, teacher_data)
+    acc_stud_final_teacher = model_student_final.accuracy(test_x, teacher_data)
+
+    print("Accuracy of following student-teacher: {}".format(acc_stud_follow_teacher))
+    print("Accuracy of final student-teacher: {}".format(acc_stud_final_teacher))
