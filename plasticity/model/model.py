@@ -64,7 +64,7 @@ class Model:
     def assert_data_shape(self, x, y):
         n = x.shape[0]
 
-        if self.input_dim and (train_x.shape != (n, self.input_dim)):
+        if self.input_dim and (x.shape != (n, self.input_dim)):
             raise ValueError(
                 "Input most be of shape {}, not {}"
                 .format((n, self.input_dim), x.shape)
