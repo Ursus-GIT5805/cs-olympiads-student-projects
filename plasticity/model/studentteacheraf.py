@@ -1,9 +1,8 @@
 import math
 import jax
 import optax
-import linear
 import loader
-from resnet import *
+from linear import *
 from model import Model
 from model import batch_norm
 from model import crossentropy_cost
@@ -42,8 +41,8 @@ def create_model(params):
 
 if __name__ == '__main__':
     teacher_epochs = 5
-    student_epochs_ratio = 10
-    student_final_epochs = 50
+    student_epochs_ratio = 20
+    student_final_epochs = 100
     noise_amount_step = 70000
 
     key = jax.random.PRNGKey(69420)
