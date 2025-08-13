@@ -15,12 +15,12 @@ def batch_norm(x):
 
 @jax.jit
 def crossentropy_cost(a, y):
-    eps = 1e-6
-    return jnp.sum(-y * jnp.log(a+eps) - (1-y) * jnp.log1p(-a+eps))
+    eps = 0.001
+    return jnp.mean(-y * jnp.log(a+eps) - (1-y) * jnp.log1p(-a+eps))
 
 @jax.jit
 def squaredmean_cost(a, y):
-    return jnp.sum( (a-y) ** 2 )
+    return jnp.mean( (a-y) ** 2 )
 
 # ===== Training =====
 
@@ -102,8 +102,8 @@ class Model:
         for epoch in range(epochs):
             print("Epoch {}/{}".format(epoch+1, epochs))
 
-            # perm = jax.random.permutation(jax.random.PRNGKey(epoch), n)
-            # train_x, train_y = train_x[perm], train_y[perm]
+            perm = jax.random.permutation(jax.random.PRNGKey(epoch), n)
+            train_x, train_y = train_x[perm], train_y[perm]
 
             for i in range(0, n, batch_size):
                 tx, ty = train_x[i : i+batch_size], train_y[i : i+batch_size]
@@ -121,6 +121,7 @@ class Model:
 
             if evaluate:
                 loss, _ = jax.value_and_grad(loss_fn)(self.params, tx, ty)
+                # scores.append(loss)
                 print("Loss: {}".format(loss))
 
         if return_score:
@@ -167,9 +168,9 @@ if __name__ == "__main__":
         a = jax.nn.sigmoid(a)
 
         a = feedforward_linear(params[1], a)
-        a = jax.nn.sigmoid(a)
-        # a = batch_norm(a)
-        # a = jax.nn.relu(a)
+        # a = jax.nn.sigmoid(a)
+        a = batch_norm(a)
+        a = jax.nn.relu(a)
 
         a = feedforward_linear(params[2], a)
         a = jax.nn.sigmoid(a)
@@ -194,9 +195,10 @@ if __name__ == "__main__":
 
     scores = model.train(
         train_x, train_y,
-        epochs=20, batch_size=100,
+        epochs=5, batch_size=10,
+        optimizer=optax.sgd(learning_rate=0.5),
         return_score=True,
-        # evaluate=(test_x, test_y)
+        evaluate=(test_x, test_y)
     )
 
     plt.plot(scores)
