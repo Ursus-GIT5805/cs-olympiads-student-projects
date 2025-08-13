@@ -150,6 +150,3 @@ class Model:
         t_label = jnp.argmax(test_y, axis=1)
 
         return jnp.sum(a_label == t_label) / test_x.shape[0] * 100
-
-    def save_to(path):
-        with open(path, "w+") as f:
