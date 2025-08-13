@@ -11,6 +11,7 @@ from model import _gen_loss_function
 from model import train_step
 import matplotlib.pyplot as plt
 import copy
+import random
 
 
 def create_model(params):
@@ -72,7 +73,7 @@ if __name__ == '__main__':
             optimizer=optax.sgd(learning_rate=0.5),
             return_score=False,
             evaluate=(test_x, test_y),
-            teacher_epoch=epoch
+            seed=random.randint(0, int(1e7))
         )
 
         the_key = jax.random.PRNGKey(epoch)
@@ -87,7 +88,6 @@ if __name__ == '__main__':
             optimizer = optax.sgd(learning_rate=0.5),
             return_score=False,
             evaluate=(test_x, test_y),
-            teacher_epoch=epoch
         )
     train_student_y_final = model_teacher.evaluate(random_noise)
     model_student_final.train(
@@ -113,7 +113,9 @@ if __name__ == '__main__':
     print("Accuracy student final Training: {}%".format(acc_train))
     print("Accuracy student final Test: {}%".format(acc_test))
 
-    teacher_data = model_teacher.evaluate(test_x)
+    random_noise_test = jax.random.uniform(key, shape=(600000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
+
+    teacher_data = model_teacher.evaluate(random_noise_test)
     acc_stud_follow_teacher = model_student_along.accuracy(test_x, teacher_data)
     acc_stud_final_teacher = model_student_final.accuracy(test_x, teacher_data)
 
