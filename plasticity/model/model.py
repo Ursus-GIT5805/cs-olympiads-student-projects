@@ -64,7 +64,7 @@ class Model:
     def assert_data_shape(self, x, y):
         n = x.shape[0]
 
-        if self.input_dim and (train_x.shape != (n, self.input_dim)):
+        if self.input_dim and (x.shape != (n, self.input_dim)):
             raise ValueError(
                 "Input most be of shape {}, not {}"
                 .format((n, self.input_dim), x.shape)
@@ -84,15 +84,19 @@ class Model:
         batch_size=128,
         optimizer=optax.sgd(learning_rate=0.01),
         cost=crossentropy_cost,
-        return_score=False,
-        evaluate=None, #     Return a list of losses per epoch
-        seed=None,
-        batches=1e6
+        return_score=False, # Returns a list of losses per batch
+        evaluate=None, # Prints a list of losses corresponding to the given test data
+        seed=42,
+        batches=None,
     ):
         n = train_x.shape[0]
         opt_state = optimizer.init(self.params)
 
         self.assert_data_shape(train_x, train_y)
+
+        r = n
+        if batches:
+            r = min(n, batch_size * batches)
 
         scores = []
         loss_fn = _gen_loss_function(self.forward, cost)
@@ -104,10 +108,10 @@ class Model:
         for epoch in range(epochs):
             print("Epoch {}/{}".format(epoch+1, epochs))
 
-            perm = jax.random.permutation(jax.random.PRNGKey(seed if seed else epoch), n)
+            perm = jax.random.permutation(jax.random.PRNGKey(seed), n)
             train_x, train_y = train_x[perm], train_y[perm]
 
-            for i in range(0, min(n,batch_size*batches), batch_size):
+            for i in range(0, r, batch_size):
                 tx, ty = train_x[i : i+batch_size], train_y[i : i+batch_size]
 
                 self.params, opt_state, loss = train_step(
