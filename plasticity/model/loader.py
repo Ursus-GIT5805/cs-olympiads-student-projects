@@ -1,8 +1,10 @@
 import jax
-from ml_datasets import mnist
+import jax.numpy as jnp
+import pickle
+import ml_datasets
 
 def load_mnist():
-    (train_x, train_y), (test_x, test_y) = mnist()
+    (train_x, train_y), (test_x, test_y) = ml_datasets.mnist()
 
     train_data = [
         (train_x[i].reshape(-1, 1), train_y[i].reshape(-1, 1))
@@ -17,4 +19,24 @@ def load_mnist():
     return train_data, test_data
 
 def load_mnist_raw():
-    return mnist()
+    return ml_datasets.mnist()
+
+def load_cifar10(path: str):
+    """
+    Loads the cifar10 batch at PATH.
+
+    Returns None on error.
+    """
+
+    with open(path, 'rb') as fo:
+        data = pickle.load(fo, encoding='bytes')
+
+        # Convert labels to onehot
+        label = data[b'labels']
+        label = jnp.eye(10)[jnp.array(label)]
+
+        # Convert batch to values from 0-1
+        batch = jnp.array(data[b'data']) / 255
+
+        return batch, label
+    return None
