@@ -22,7 +22,7 @@ def crossentropy_cost(a, y):
 
 # ===== Training =====
 
-def gen_loss_function(run, cost):
+def _gen_loss_function(run, cost):
     def loss_fn(params, x, y):
         a = run(params, x)
         return cost(a, y)
@@ -30,7 +30,7 @@ def gen_loss_function(run, cost):
     return jax.jit(loss_fn)
 
 @partial(jax.jit, static_argnames=('optimizer', 'loss_fn'))
-def optimize(params, opt_state, x, y, optimizer, loss_fn):
+def _optimize(params, opt_state, x, y, optimizer, loss_fn):
     grads = jax.grad(loss_fn)(params, x, y)
     updates, opt_state = optimizer.update(grads, opt_state, params)
     params = optax.apply_updates(params, updates)
@@ -38,7 +38,6 @@ def optimize(params, opt_state, x, y, optimizer, loss_fn):
 
 # ===== Model =====
 
-@jax.tree_util.register_dataclass
 @dataclass
 class Model:
     input_dim: int
@@ -91,7 +90,7 @@ class Model:
         self.assert_data_shape(train_x, train_y)
 
         scores = []
-        loss_fn = gen_loss_function(self.forward, cost)
+        loss_fn = _gen_loss_function(self.forward, cost)
 
         if evaluate:
             tx, ty = evaluate
@@ -106,7 +105,7 @@ class Model:
             for i in range(0, n, batch_size):
                 tx, ty = train_x[i : i+batch_size], train_y[i : i+batch_size]
 
-                self.params, opt_state = optimize(
+                self.params, opt_state = _optimize(
                     self.params,
                     opt_state,
                     tx,
@@ -149,7 +148,11 @@ if __name__ == "__main__":
             a = jax.nn.sigmoid(z)
         return a
 
-    model = Model.init(params, jax.jit(run))
+    model = Model.init(
+        params,
+        jax.jit(run)
+    )
+
     train_data, test_data = loader.load_mnist_raw()
 
     train_x, train_y = train_data
