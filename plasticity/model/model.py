@@ -64,7 +64,7 @@ class Model:
     def assert_data_shape(self, x, y):
         n = x.shape[0]
 
-        if self.input_dim and (train_x.shape != (n, self.input_dim)):
+        if self.input_dim and (x.shape != (n, self.input_dim)):
             raise ValueError(
                 "Input most be of shape {}, not {}"
                 .format((n, self.input_dim), x.shape)
@@ -85,7 +85,8 @@ class Model:
         optimizer=optax.sgd(learning_rate=0.01),
         cost=crossentropy_cost,
         return_score=False,
-        evaluate=None # Return a list of losses per epoch
+        evaluate=None, # Return a list of losses per epoch
+        teacher_epoch=0
     ):
         n = train_x.shape[0]
         opt_state = optimizer.init(self.params)
@@ -102,7 +103,7 @@ class Model:
         for epoch in range(epochs):
             print("Epoch {}/{}".format(epoch+1, epochs))
 
-            perm = jax.random.permutation(jax.random.PRNGKey(epoch), n)
+            perm = jax.random.permutation(jax.random.PRNGKey(teacher_epoch*epochs+epoch), n)
             train_x, train_y = train_x[perm], train_y[perm]
 
             for i in range(0, n, batch_size):
@@ -150,3 +151,14 @@ class Model:
         t_label = jnp.argmax(test_y, axis=1)
 
         return jnp.sum(a_label == t_label) / test_x.shape[0] * 100
+    
+    def evaluate(self, test_data):
+        solution = []
+        for x in test_data:
+            a = self.forward(self.params,x)
+            solution.append( a)
+        jnpsol = jnp.array(solution)
+        jnpsol.reshape(test_data.shape[0],10)
+        return jnpsol
+
+        
