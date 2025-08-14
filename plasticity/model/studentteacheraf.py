@@ -6,6 +6,7 @@ from linear import *
 from model import Model
 from model import batch_norm
 from model import kl_divergence
+from model import squaredmean_cost
 import matplotlib.pyplot as plt
 import copy
 import random
@@ -37,11 +38,11 @@ def create_model(params):
     )
 
 if __name__ == '__main__':
-    teacher_epochs = 5
-    student_epochs = 20
+    teacher_epochs = 15
+    student_epochs = 30
     student_final_epochs = teacher_epochs*student_epochs
-    noise_amount_step = 60000
-    batch_size = 100
+    noise_amount_step = 40000
+    batch_size = 250
 
     key = jax.random.PRNGKey(69420)
     params = linears_from_array([784, 100, 100, 100, 10], key=key)
@@ -68,18 +69,19 @@ if __name__ == '__main__':
         model_teacher.train(
             train_x, train_y,
             epochs=1, batch_size=batch_size,
-            optimizer=optax.sgd(learning_rate=0.5),
+            optimizer=optax.sgd(learning_rate=0.1),
             return_score=False,
+            cost=squaredmean_cost,
             # evaluate=(test_x, test_y),
             seed=random.randint(0, int(1e7))
         )
 
         # the_key = jax.random.PRNGKey(epoch)
         random_noise_step = random_noise[epoch*noise_amount_step:(epoch+1)*noise_amount_step]
-        train_student_y = model_teacher.evaluate(random_noise_step)
+        print(random_noise_step.device)
+        train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
 
-        teacher_data = model_teacher.evaluate(random_noise_test)
-        teacher_data = jax.device_put(teacher_data)
+        teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
 
         print("Live student epochs:")
         for student_epoch in range(student_epochs):
@@ -87,22 +89,22 @@ if __name__ == '__main__':
             model_student_along.train(
                 random_noise_step, train_student_y,
                 epochs=1, batch_size=batch_size,
-                optimizer = optax.sgd(learning_rate=0.5),
+                optimizer = optax.sgd(learning_rate=0.1),
                 return_score=False,
                 # evaluate=(test_x, test_y),
             )
-            along_student_data = model_student_along.evaluate(random_noise_test)
+            along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
             div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
             student_epochs_along_divergence.append(div_stud_along_teacher)
 
         
     print("After student epochs:")
 
-    train_student_y_final = model_teacher.evaluate(random_noise)
+    train_student_y_final = model_teacher.forward(model_teacher.params, random_noise)
     model_student_final.train(
         random_noise, train_student_y_final,
         epochs=student_final_epochs, batch_size=batch_size,
-        optimizer = optax.sgd(learning_rate=0.5),
+        optimizer = optax.sgd(learning_rate=0.1),
         return_score=False,
         # evaluate=(test_x, test_y),
     )
@@ -123,9 +125,9 @@ if __name__ == '__main__':
     print("Accuracy after student on test data: {}%".format(acc_test))
 
 
-    teacher_data = model_teacher.evaluate(random_noise_test)
-    along_student_data = model_student_along.evaluate(random_noise_test)
-    final_student_data = model_student_final.evaluate(random_noise_test)
+    teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
+    along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
+    final_student_data = model_student_final.forward(model_student_final.params, random_noise_test)
 
     div_stud_follow_teacher = kl_divergence(q=along_student_data, p=teacher_data)
     div_stud_final_teacher = kl_divergence(q=final_student_data, p=teacher_data)
