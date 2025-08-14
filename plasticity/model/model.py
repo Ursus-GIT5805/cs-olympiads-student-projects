@@ -172,14 +172,8 @@ class Model:
 
         return jnp.sum(a_label == t_label) / test_x.shape[0] * 100
 
-    def evaluate(self, test_data):
-        solution = []
-        for x in test_data:
-            a = self.forward(self.params,x)
-            solution.append( a)
-        jnpsol = jnp.array(solution)
-        jnpsol.reshape(test_data.shape[0],10)
-        return jnpsol
+    def evaluate(self, a):
+        return self.forward(self.params, a)
 
     def save(self, path, overwrite=False):
         mode = "wb" if overwrite else "xb"
