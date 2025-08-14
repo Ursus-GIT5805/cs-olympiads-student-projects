@@ -1,5 +1,5 @@
 import jax
-from model import Model
+from model import *
 
 def FirstResnet_Mnist():
     params = [
