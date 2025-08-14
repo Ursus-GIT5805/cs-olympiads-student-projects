@@ -43,8 +43,11 @@ def _gen_loss_function(run, cost):
 
     return jax.jit(loss_fn)
 
-@partial(jax.jit, static_argnames=('optimizer', 'loss_fn'))
-def train_step(params, opt_state, x, y, optimizer, loss_fn):
+@partial(jax.jit, static_argnames=('optimizer', 'loss_fn', 'batch_size'))
+def train_step(params, opt_state, x, y, optimizer, loss_fn, batch_step, batch_size):
+    x = jax.lax.dynamic_slice(x, (batch_step, 0), (batch_size, x.shape[1]))
+    y = jax.lax.dynamic_slice(y, (batch_step, 0), (batch_size, y.shape[1]))
+    #x, y = x[batch_step*batch_size : batch_step+batch_size], y[batch_step*batch_size : batch_step+batch_size]
     loss, grads = jax.value_and_grad(loss_fn)(params, x, y)
     updates, opt_state = optimizer.update(grads, opt_state, params)
     params = optax.apply_updates(params, updates)
@@ -125,17 +128,21 @@ class Model:
 
             perm = jax.random.permutation(jax.random.PRNGKey(seed), n)
             train_x, train_y = train_x[perm], train_y[perm]
+            train_x = jax.device_put(train_x)
+            train_y = jax.device_put(train_y)
+
 
             for i in range(0, r, batch_size):
-                tx, ty = train_x[i : i+batch_size], train_y[i : i+batch_size]
 
                 self.params, opt_state, loss = train_step(
                     self.params,
                     opt_state,
-                    tx,
-                    ty,
+                    train_x,
+                    train_y,
                     optimizer,
                     loss_fn,
+                    i,
+                    batch_size
                 )
 
                 if return_score: scores.append(loss)
