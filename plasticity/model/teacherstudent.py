@@ -66,15 +66,18 @@ if __name__ == "__main__":
     teacher_epochs = 20
     student_epochs_per_teacher_epoch = 10
 
-    for teacher_epoch in range(teacher_epochs):
-        print(f"Global epoch  {teacher_epoch}:")
+    optimizer = optax.sgd(learning_rate=0.5)
+
+    for epoch in range(teacher_epochs):
+        print(f"Global epoch  {epoch}:")
 
         # ===== Teacher training =====
         print("Teacher Epochs:")
         teacher.train(
             train_teacher_x, train_teacher_y,
-            epochs=1, batch_size=100,
-            optimizer=optax.sgd(learning_rate=0.5),
+            epochs=1,
+            batch_size=100,
+            optimizer=optimizer,
             seed=random.randint(0, int(1e9)),
             batches=10
             # return_score=True,
@@ -86,8 +89,9 @@ if __name__ == "__main__":
         print("Student Epochs:")
         student.train(
             train_student_x, train_student_y,
-            epochs=student_epochs_per_teacher_epoch, batch_size=100,
-            optimizer=optax.sgd(learning_rate=0.5),
+            epochs=student_epochs_per_teacher_epoch,
+            batch_size=100,
+            optimizer=optimizer,
             seed=random.randint(0, int(1e9)),
             batches=10
             # return_score=True,
@@ -111,9 +115,9 @@ if __name__ == "__main__":
         )
         studenth.train(
             train_student_x, train_student_y,
-            epochs=student_epochs_per_teacher_epoch,
+            epochs=student_epochs_per_teacher_epoch*(epoch+1),
             batch_size=100,
-            optimizer=optax.sgd(learning_rate=0.5),
+            optimizer=optimizer,
             seed=random.randint(0, int(1e9)),
             batches=10
             # return_score=True,
@@ -126,8 +130,6 @@ if __name__ == "__main__":
         latestudents_accs.append(kl_student)
 
         print()
-
-
 
 
     num_epochs = student_epochs_per_teacher_epoch*teacher_epochs
@@ -155,8 +157,11 @@ if __name__ == "__main__":
     acc_student2_vs_student1 = (acc_student2-acc_student)
     print("Accuracy Second Student is {}% more accurate than the first Student".format(acc_student2_vs_student1))
 
-    plt.plot(student_accs)
-    plt.plot(latestudents_accs)
+    plt.plot(student_accs, label='Live student')
+    plt.plot(latestudents_accs, label='Bright student')
+    plt.xlabel("Epoch")
+    plt.ylabel("KL Divergence")
+    plt.legend()
     # plt.axhline(y=acc_student, color='r')
     plt.grid()
     plt.show()
