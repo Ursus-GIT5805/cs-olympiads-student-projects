@@ -47,7 +47,6 @@ def _gen_loss_function(run, cost):
 def train_step(params, opt_state, x, y, optimizer, loss_fn, batch_step, batch_size):
     x = jax.lax.dynamic_slice(x, (batch_step, 0), (batch_size, x.shape[1]))
     y = jax.lax.dynamic_slice(y, (batch_step, 0), (batch_size, y.shape[1]))
-    #x, y = x[batch_step*batch_size : batch_step+batch_size], y[batch_step*batch_size : batch_step+batch_size]
     loss, grads = jax.value_and_grad(loss_fn)(params, x, y)
     updates, opt_state = optimizer.update(grads, opt_state, params)
     params = optax.apply_updates(params, updates)
@@ -126,14 +125,11 @@ class Model:
         for epoch in range(epochs):
             print("Epoch {}/{}".format(epoch+1, epochs))
 
-            perm = jax.random.permutation(jax.random.PRNGKey(seed), n)
-            train_x, train_y = train_x[perm], train_y[perm]
-            train_x = jax.device_put(train_x)
-            train_y = jax.device_put(train_y)
-
+            key = jax.random.PRNGKey(seed)
+            train_x = jax.random.permutation(key, train_x, axis=0)
+            train_y = jax.random.permutation(key, train_y, axis=0)
 
             for i in range(0, r, batch_size):
-
                 self.params, opt_state, loss = train_step(
                     self.params,
                     opt_state,
