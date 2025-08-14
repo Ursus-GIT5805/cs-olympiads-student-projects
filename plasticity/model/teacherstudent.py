@@ -67,6 +67,7 @@ if __name__ == "__main__":
     student_epochs_per_teacher_epoch = 10
 
     optimizer = optax.sgd(learning_rate=0.5)
+    random_noise_test = jax.random.uniform(key, shape=(6000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
 
     for epoch in range(teacher_epochs):
         print(f"Global epoch  {epoch}:")
@@ -98,7 +99,6 @@ if __name__ == "__main__":
             # evaluate=(test_x, test_y)
         )
 
-        random_noise_test = jax.random.uniform(key, shape=(6000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
 
         # Measure divergence between teacher and student
         test_teacher_y = teacher.evaluate(random_noise_test)
