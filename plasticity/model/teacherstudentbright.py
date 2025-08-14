@@ -2,7 +2,7 @@ import loader
 import matplotlib.pyplot as plt
 from linear import *
 from model import *
-import math
+
 import random
 
 if __name__ == "__main__":
@@ -10,6 +10,7 @@ if __name__ == "__main__":
 
     params_teacher = [
         linear(784, 100, key),
+        linear(100, 100, key),
         linear(100, 100, key),
         linear(100, 100, key),
         linear(100, 10, key),
@@ -21,13 +22,13 @@ if __name__ == "__main__":
 
     def run(params, a):
         a = feedforward_linear(params[0], a)
+        a = jax.nn.relu(a)
 
         x1 = a.copy()
 
-        a = jax.nn.sigmoid(a)
-        a = feedforward_linear(params[1], a)
         a = batch_norm(a)
         a = jax.nn.relu(a)
+        a = feedforward_linear(params[1], a)
 
         a = feedforward_linear(params[2], a)
         a = batch_norm(a)
@@ -36,6 +37,9 @@ if __name__ == "__main__":
         a = jax.nn.relu(a)
 
         a = feedforward_linear(params[3], a)
+        a = jax.nn.sigmoid( a )
+
+        a = feedforward_linear(params[4], a)
         a = jax.nn.softmax( a )
         return a
 
@@ -45,99 +49,81 @@ if __name__ == "__main__":
     train_student_x, _ = train_student
     test_x, test_y = test_data
 
-    forward = jax.jit(run)
-
     teacher = Model.init(
         params_teacher,
-        forward,
+        jax.jit(run),
     )
     student = Model.init(
         params_student,
-        forward,
+        jax.jit(run)
     )
     student2 = Model.init(
         original_params,
-        forward,
+        jax.jit(run)
     )
 
     student_accs = []
     latestudents_accs = []
     acc_student = 0
-    teacher_epochs = 20
+    teacher_epochs = 50
     student_epochs_per_teacher_epoch = 10
 
-    optimizer = optax.sgd(learning_rate=0.5)
-
-    for epoch in range(teacher_epochs):
-        print(f"Global epoch  {epoch}:")
-
-        # ===== Teacher training =====
+    for teacher_epoch in range(teacher_epochs):
+        print(f"Global epoch  {teacher_epoch}:")
         print("Teacher Epochs:")
+
         teacher.train(
             train_teacher_x, train_teacher_y,
-            epochs=1,
-            batch_size=100,
-            optimizer=optimizer,
+            epochs=1, batch_size=100,
+            optimizer=optax.sgd(learning_rate=0.5),
             seed=random.randint(0, int(1e9)),
             batches=10
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
-        train_student_y = teacher.evaluate(train_student_x)
 
-        # ===== Student1 training =====
+        train_student_y = teacher.evaluate(train_student_x)
         print("Student Epochs:")
+        # if teacher_epoch==teacher_epochs-1: 
+        #     student_epochs_per_teacher_epoch=300
         student.train(
             train_student_x, train_student_y,
-            epochs=student_epochs_per_teacher_epoch,
-            batch_size=100,
-            optimizer=optimizer,
+            epochs=student_epochs_per_teacher_epoch, batch_size=100,
+            optimizer=optax.sgd(learning_rate=0.5),
             seed=random.randint(0, int(1e9)),
             batches=10
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
+        test_teacher_y = teacher.evaluate(test_x)
+        # acc_teacher = teacher.accuracy(test_x,test_y)
 
-        random_noise_test = jax.random.uniform(key, shape=(6000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
+        acc_student = student.accuracy(test_x, test_teacher_y)
+        print("Accuracy Student: {}%".format(acc_student))
+        student_accs.append(acc_student)
 
-        # Measure divergence between teacher and student
-        test_teacher_y = teacher.evaluate(random_noise_test)
-        test_student_y = student.evaluate(random_noise_test)
-        kl_student = kl_divergence(test_teacher_y,test_student_y)
-
-        student_accs.append(kl_student)
-
-        # ===== Student2 training =====
         thparams = original_params.copy()
         studenth = Model.init(
             thparams,
-            forward,
+            jax.jit(run)
         )
         studenth.train(
             train_student_x, train_student_y,
-            epochs=student_epochs_per_teacher_epoch*(epoch+1),
-            batch_size=100,
-            optimizer=optimizer,
+            epochs=student_epochs_per_teacher_epoch*(teacher_epoch+1), batch_size=100,
+            optimizer=optax.sgd(learning_rate=0.5),
             seed=random.randint(0, int(1e9)),
             batches=10
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
-        test_student_y = studenth.evaluate(random_noise_test)
-        kl_student = kl_divergence(test_teacher_y,test_student_y)
-
-        print("Bright student KL {}".format(kl_student))
-        latestudents_accs.append(kl_student)
-
+        acc_studenth = studenth.accuracy(test_x, test_teacher_y)
+        print("Accuracy Bright Student: {}%".format(acc_studenth))
         print()
 
-
-    num_epochs = student_epochs_per_teacher_epoch*teacher_epochs
     train_student_y = teacher.evaluate(train_student_x)
     student2.train(
         train_student_x, train_student_y,
-        epochs=num_epochs,
-        batch_size=100,
+        epochs=teacher_epochs*student_epochs_per_teacher_epoch, batch_size=100,
         optimizer=optax.sgd(learning_rate=0.5),
         seed=random.randint(0, int(1e9)),
         batches=10
@@ -145,23 +131,16 @@ if __name__ == "__main__":
         # evaluate=(test_x, test_y)
     )
 
-    noise = jax.random.uniform(key, shape=(10000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
-    test_teacher_y = teacher.evaluate(noise)
+    test_teacher_y = teacher.evaluate(test_x)
 
-    acc_student = student.accuracy(noise, test_teacher_y)
-    print("Matching student1 (live student) to teacher: {}%".format(acc_student))
-
-    acc_student2 = student2.accuracy(noise, test_teacher_y)
-    print("Matching student2 (after student) to teacher: {}%".format(acc_student2))
+    acc_student2 = student2.accuracy(test_x,test_teacher_y)
+    print("Accuracy Second Student: {}%".format(acc_student2))
 
     acc_student2_vs_student1 = (acc_student2-acc_student)
-    print("Accuracy Second Student is {}% more accurate than the first Student".format(acc_student2_vs_student1))
-
-    plt.plot(student_accs, label='Live student')
-    plt.plot(latestudents_accs, label='Bright student')
-    plt.xlabel("Epoch")
-    plt.ylabel("KL Divergence")
-    plt.legend()
+    print("Accuracy Sedond Student is {} better than the first Student".format(acc_student2_vs_student1))
+    
+    plt.plot(student_accs)
+    plt.plot(latestudents_accs)
     # plt.axhline(y=acc_student, color='r')
     plt.grid()
     plt.show()

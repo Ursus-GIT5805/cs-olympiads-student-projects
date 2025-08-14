@@ -5,6 +5,13 @@ from model import *
 import math
 import random
 
+def getweightmagnitude(params):
+    total=0.0
+    for param in params:
+        total+=jnp.mean(param[0])
+    return total/len(params)
+    
+
 if __name__ == "__main__":
     key = jax.random.PRNGKey(42)
 
@@ -63,11 +70,14 @@ if __name__ == "__main__":
     student_accs = []
     latestudents_accs = []
     acc_student = 0
-    teacher_epochs = 20
-    student_epochs_per_teacher_epoch = 10
+    teacher_epochs = 50
+    student_epochs_per_teacher_epoch = []
+    optimizer_name = "sgd"
+    learning_rate = 0.1
+    optimizer = getattr(optax, optimizer_name)(learning_rate=learning_rate)
+    optimizer2 = getattr(optax, optimizer_name)(learning_rate=0.2)
 
-    optimizer = optax.sgd(learning_rate=0.5)
-    random_noise_test = jax.random.uniform(key, shape=(6000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
+    random_noise_test = jax.random.uniform(key, shape=(10000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
 
     for epoch in range(teacher_epochs):
         print(f"Global epoch  {epoch}:")
@@ -78,15 +88,16 @@ if __name__ == "__main__":
             train_teacher_x, train_teacher_y,
             epochs=1,
             batch_size=100,
-            optimizer=optimizer,
+            optimizer=optimizer2,
             seed=random.randint(0, int(1e9)),
-            batches=10
+            batches=10,
+
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
         train_student_y = teacher.evaluate(train_student_x)
 
-        # ===== Student1 training =====
+            # ===== Student1 training =====
         print("Student Epochs:")
         student.train(
             train_student_x, train_student_y,
@@ -94,7 +105,9 @@ if __name__ == "__main__":
             batch_size=100,
             optimizer=optimizer,
             seed=random.randint(0, int(1e9)),
-            batches=10
+            batches=10,
+            l2=0,
+
             # return_score=True,
             # evaluate=(test_x, test_y)
         )
@@ -106,30 +119,31 @@ if __name__ == "__main__":
         kl_student = kl_divergence(test_teacher_y,test_student_y)
 
         student_accs.append(kl_student)
+        print("Late student KL {}".format(kl_student))
+        #===== Student2 training =====
+        # thparams = original_params.copy()
+        # studenth = Model.init(
+        #     thparams,
+        #     forward,
+        # )
+        # studenth.train(
+        #     train_student_x, train_student_y,
+        #     epochs=student_epochs_per_teacher_epoch*(epoch+1),
+        #     batch_size=100,
+        #     optimizer=optimizer,
+        #     seed=random.randint(0, int(1e9)),
+        #     batches=10,
+        #     l2=1e-6
+        #     # return_score=True,
+        #     # evaluate=(test_x, test_y)
+        # )
+        # test_student_y = studenth.evaluate(random_noise_test)
+        # kl_student = kl_divergence(test_teacher_y,test_student_y)
 
-        # ===== Student2 training =====
-        thparams = original_params.copy()
-        studenth = Model.init(
-            thparams,
-            forward,
-        )
-        studenth.train(
-            train_student_x, train_student_y,
-            epochs=student_epochs_per_teacher_epoch*(epoch+1),
-            batch_size=100,
-            optimizer=optimizer,
-            seed=random.randint(0, int(1e9)),
-            batches=10
-            # return_score=True,
-            # evaluate=(test_x, test_y)
-        )
-        test_student_y = studenth.evaluate(random_noise_test)
-        kl_student = kl_divergence(test_teacher_y,test_student_y)
+        # print("Bright student KL {}".format(kl_student))
+        # latestudents_accs.append(kl_student)
 
-        print("Bright student KL {}".format(kl_student))
-        latestudents_accs.append(kl_student)
-
-        print()
+        # print()
 
 
     num_epochs = student_epochs_per_teacher_epoch*teacher_epochs
@@ -138,9 +152,10 @@ if __name__ == "__main__":
         train_student_x, train_student_y,
         epochs=num_epochs,
         batch_size=100,
-        optimizer=optax.sgd(learning_rate=0.5),
+        optimizer=optimizer,
         seed=random.randint(0, int(1e9)),
-        batches=10
+        batches=10,
+        l2=0
         # return_score=True,
         # evaluate=(test_x, test_y)
     )
@@ -150,19 +165,22 @@ if __name__ == "__main__":
 
     acc_student = student.accuracy(noise, test_teacher_y)
     print("Matching student1 (live student) to teacher: {}%".format(acc_student))
-
+    print(student_accs)
     acc_student2 = student2.accuracy(noise, test_teacher_y)
     print("Matching student2 (after student) to teacher: {}%".format(acc_student2))
 
     acc_student2_vs_student1 = (acc_student2-acc_student)
     print("Accuracy Second Student is {}% more accurate than the first Student".format(acc_student2_vs_student1))
     plt.title("KL[Teacher || Student]")
-    plt.figtext(0, 0, "KL Divergence between teacher and student with student having {} epochs for each teacher epoch".format(student_epochs_per_teacher_epoch), fontsize = 10)
+    plt.figtext(0, 0, "KL Divergence between teacher and student  with student having {} epochs \n for each teacher epoch with optimizer {}  and learning rate {}".format(student_epochs_per_teacher_epoch, optimizer_name, learning_rate), fontsize = 10)
+    # plt.figtext(0, 0, "Weight Magnitudefor every student epoch (sgd with 0.2 learning rate)", fontsize = 10)
     plt.plot(student_accs, label='Live student')
-    plt.plot(latestudents_accs, label='Bright student')
+    # plt.plot(latestudents_accs, label='Bright student')
+    # plt.plot([x-y for x, y in zip(student_accs,latestudents_accs)], label='Live Student - Bright student')
     plt.xlabel("Epoch")
-    plt.ylabel("KL Divergence")
+    plt.ylabel("KL[Teacher || Student]")
     plt.legend()
     # plt.axhline(y=acc_student, color='r')
     plt.grid()
     plt.show()
+#96.66% accuracy bright student after 500 epochs with 0.2 learning rate and sgd
