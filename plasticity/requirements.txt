@@ -11,3 +11,4 @@ opt-einsum==3.4.0
 scipy==1.16.1
 srsly==2.5.1
 tqdm==4.67.1
+dill==0.4.0

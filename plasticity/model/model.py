@@ -2,6 +2,8 @@ import jax
 import jax.numpy as jnp
 import optax
 
+import dill as pickle
+
 from dataclasses import dataclass
 from functools import partial
 
@@ -95,12 +97,15 @@ class Model:
         optimizer=optax.sgd(learning_rate=0.01),
         cost=crossentropy_cost,
         return_score=False, # Returns a list of losses per batch
+        opt_state=None,
         evaluate=None, # Prints a list of losses corresponding to the given test data
         seed=42,
         batches=None,
     ):
         n = train_x.shape[0]
-        opt_state = optimizer.init(self.params)
+
+        if opt_state == None:
+            opt_state = optimizer.init(self.params)
 
         self.assert_data_shape(train_x, train_y)
 
@@ -166,7 +171,7 @@ class Model:
         t_label = jnp.argmax(test_y, axis=1)
 
         return jnp.sum(a_label == t_label) / test_x.shape[0] * 100
-    
+
     def evaluate(self, test_data):
         solution = []
         for x in test_data:
@@ -175,3 +180,13 @@ class Model:
         jnpsol = jnp.array(solution)
         jnpsol.reshape(test_data.shape[0],10)
         return jnpsol
+
+    def save(self, path, overwrite=False):
+        mode = "wb" if overwrite else "xb"
+
+        with open(path, mode) as f:
+            pickle.dump(self, f)
+
+    def load(path):
+        with open(path, "rb") as f:
+            return pickle.load(f)
