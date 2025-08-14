@@ -24,6 +24,7 @@ def load_mnist_raw():
 def load_cifar10(path: str):
     """
     Loads the cifar10 batch at PATH.
+    Download the cifar10 dataset from https://www.cs.toronto.edu/~kriz/cifar.html.
 
     Returns None on error.
     """
@@ -37,6 +38,7 @@ def load_cifar10(path: str):
 
         # Convert batch to values from 0-1
         batch = jnp.array(data[b'data']) / 255
+        batch = batch.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
 
         return batch, label
     return None
