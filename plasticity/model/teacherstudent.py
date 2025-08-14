@@ -156,7 +156,8 @@ if __name__ == "__main__":
 
     acc_student2_vs_student1 = (acc_student2-acc_student)
     print("Accuracy Second Student is {}% more accurate than the first Student".format(acc_student2_vs_student1))
-
+    plt.title("KL[Teacher || Student]")
+    plt.figtext(0, 0, "KL Divergence between teacher and student with student having {} epochs for each teacher epoch".format(student_epochs_per_teacher_epoch), fontsize = 10)
     plt.plot(student_accs, label='Live student')
     plt.plot(latestudents_accs, label='Bright student')
     plt.xlabel("Epoch")
