@@ -228,7 +228,7 @@ if __name__ == '__main__':
             #return_score=True,
             #evaluate=(test_x, test_y),
         )
-        protest_y = model_teacher.forward(model_teacher.params, test_y)
+        protest_y = model_teacher.forward(model_teacher.params, test_x)
         along_student_acc = model_student_along.accuracy(test_x, protest_y)
         accuracies.append(along_student_acc/100)
 
