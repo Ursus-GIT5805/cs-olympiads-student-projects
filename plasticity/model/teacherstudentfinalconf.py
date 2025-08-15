@@ -170,7 +170,7 @@ import copy
 import random
 
 def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
-    return minepoch*((total_student_epochs/minepoch)**(epoch/(teacher_epochs-1)))
+    return int(minepoch*((total_student_epochs/minepoch)**(epoch/(teacher_epochs-1))))
 
 if __name__ == '__main__':
     teacher_epochs = 15
