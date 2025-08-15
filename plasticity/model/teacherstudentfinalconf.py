@@ -215,7 +215,7 @@ if __name__ == '__main__':
         print(random_noise_step.device)
         train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
 
-        teacher_data = model_teacher.forward(model_teacher.params, random_noise)
+        teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
 
 
         print("Live student epochs:")
@@ -232,7 +232,7 @@ if __name__ == '__main__':
         along_student_acc = model_student_along.accuracy(test_x, protest_y)
         accuracies.append(along_student_acc/100)
 
-        along_student_data = model_student_along.forward(model_student_along.params, random_noise)
+        along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
         div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
         student_epochs_along_divergence.append(div_stud_along_teacher)
 
