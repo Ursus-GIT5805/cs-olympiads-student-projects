@@ -4,17 +4,15 @@ import optax
 
 import loader
 from linear import *
-from model import Model
-from model import batch_norm
 from model import kl_divergence
 from model import squaredmean_cost
 import presets
 
 import matplotlib.pyplot as plt
-import copy
 import random
 
 if __name__ == '__main__':
+#with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
     teacher_epochs = 10
     student_epochs = 30
     #student_final_epochs = teacher_epochs*student_epochs

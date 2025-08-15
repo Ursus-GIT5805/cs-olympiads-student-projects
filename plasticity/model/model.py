@@ -46,14 +46,24 @@ def _gen_loss_function(run, cost):
 
     return jax.jit(loss_fn)
 
-@partial(jax.jit, static_argnames=('optimizer', 'loss_fn', 'batch_size'))
-def train_step(params, opt_state, x, y, optimizer, loss_fn, batch_step, batch_size):
-    x = jax.lax.dynamic_slice(x, (batch_step, 0), (batch_size, x.shape[1]))
-    y = jax.lax.dynamic_slice(y, (batch_step, 0), (batch_size, y.shape[1]))
-    loss, grads = jax.value_and_grad(loss_fn)(params, x, y)
-    updates, opt_state = optimizer.update(grads, opt_state, params)
-    params = optax.apply_updates(params, updates)
-    return params, opt_state, loss
+@partial(jax.jit, static_argnames=('optimizer', 'loss_fn', 'batches', 'batch_size'))
+def train_epoch(params, opt_state, x, y, optimizer, loss_fn, batches, batch_size):
+
+    def step(carry, batch_idx):
+        params, opt_state = carry
+        start = batch_idx * batch_size
+        xb = jax.lax.dynamic_slice(x, (start, 0), (batch_size, x.shape[1]))
+        yb = jax.lax.dynamic_slice(y, (start, 0), (batch_size, y.shape[1]))
+
+        loss, grads = jax.value_and_grad(loss_fn)(params, xb, yb)
+        updates, opt_state = optimizer.update(grads, opt_state, params)
+        params = optax.apply_updates(params, updates)
+        return (params, opt_state), loss
+
+    (params, opt_state), losses = jax.lax.scan(step, (params, opt_state), jnp.arange(batches))
+    return params, opt_state, losses
+
+
 
 # ===== Model =====
 
@@ -115,8 +125,10 @@ class Model:
         self.assert_data_shape(train_x, train_y)
 
         r = n
-        if batches:
-            r = min(n, batch_size * batches)
+        if not batches:
+            batches = train_x.shape[0] // batch_size
+        if not batch_size:
+            batch_size = train_x.shape[0] // batches
 
         scores = []
         loss_fn = _gen_loss_function(self.forward, cost)
@@ -132,19 +144,16 @@ class Model:
             train_x = jax.random.permutation(key, train_x, axis=0)
             train_y = jax.random.permutation(key, train_y, axis=0)
 
-            for i in range(0, r, batch_size):
-                self.params, opt_state, loss = train_step(
-                    self.params,
-                    opt_state,
-                    train_x,
-                    train_y,
-                    optimizer,
-                    loss_fn,
-                    i,
-                    batch_size
-                )
-
-                if return_score: scores.append(loss)
+            self.params, opt_state, loss = train_epoch(
+                params=self.params,
+                opt_state=opt_state,
+                x=train_x,
+                y=train_y,
+                optimizer=optimizer,
+                loss_fn=loss_fn,
+                batches=batches,
+                batch_size=batch_size
+            )
 
             if evaluate:
                 loss, _ = jax.value_and_grad(loss_fn)(self.params, tx, ty)
