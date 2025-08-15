@@ -21,9 +21,9 @@ if __name__ == '__main__':
 
     key = jax.random.PRNGKey(69420)
 
-    model_teacher = presets.Resnet1_mnist(key)
-    model_student_along = presets.Resnet1_mnist(key)
-    model_student_final = presets.Resnet1_mnist(key)
+    model_teacher = presets.Resnet2_mnist(key)
+    model_student_along = presets.Resnet2_mnist(key)
+    model_student_final = presets.Resnet2_mnist(key)
 
     train_data, test_data = loader.load_mnist_raw()
     train_x, train_y = train_data
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     student_epochs_along_divergence = []
     accuracies = []
 
-    optimizer = optax.sgd(learning_rate=0.1)
+    optimizer = optax.adamw(learning_rate=4e-5, weight_decay=0.1)
     opt_state = optimizer.init(model_student_along.params)
 
     for epoch in range(teacher_epochs):
@@ -78,7 +78,8 @@ if __name__ == '__main__':
             eval_fn=kl_divergence_cost
         )
         student_epochs_along_divergence += scores
-        print(scores)
+        # print(len(scores))
+        # print(scores)
 
         # along_student_acc = model_student_along.accuracy(test_x, test_y)
         # accuracies.append(along_student_acc/100)
@@ -126,7 +127,7 @@ if __name__ == '__main__':
     # print("Divergence of after student to teacher: {}".format(div_stud_final_teacher))
 
     data = jnp.asarray(student_epochs_along_divergence)
-    jnp.save('no_function_sgd.npy', data)
+    jnp.save('adamw.npy', data)
 
     plt.plot(student_epochs_along_divergence, label='divergence')
     plt.grid()
