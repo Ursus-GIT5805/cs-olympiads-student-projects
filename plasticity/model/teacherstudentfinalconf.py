@@ -223,8 +223,8 @@ if __name__ == '__main__':
         bright_student = presets.Resnet1_mnist(key)
 
         bright_student.train(
-            random_noise_step*(epoch+1), train_student_y,
-            epochs=student_epochs, batch_size=batch_size,
+            random_noise_step, train_student_y,
+            epochs=student_epochs*(epoch+1), batch_size=batch_size,
             optimizer = optax.sgd(learning_rate=0.1),
             #return_score=True,
             #evaluate=(test_x, test_y),
