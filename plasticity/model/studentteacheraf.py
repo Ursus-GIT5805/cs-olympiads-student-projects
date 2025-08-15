@@ -1,41 +1,18 @@
 import math
 import jax
 import optax
+
 import loader
 from linear import *
 from model import Model
 from model import batch_norm
 from model import kl_divergence
 from model import squaredmean_cost
+import presets
+
 import matplotlib.pyplot as plt
 import copy
 import random
-
-def create_model(params):
-    def run(params, a):
-        a = feedforward_linear(params[0], a)
-
-        x1 = a.copy()
-
-        a = jax.nn.sigmoid(a)
-        a = feedforward_linear(params[1], a)
-        a = batch_norm(a)
-        a = jax.nn.relu(a)
-
-        a = feedforward_linear(params[2], a)
-        a = batch_norm(a)
-
-        a = a + x1
-        a = jax.nn.relu(a)
-
-        a = feedforward_linear(params[3], a)
-        a = jax.nn.softmax(a)
-        return a
-
-    return Model.init(
-        params,
-        jax.jit(run),
-    )
 
 if __name__ == '__main__':
     teacher_epochs = 15
@@ -45,11 +22,10 @@ if __name__ == '__main__':
     batch_size = 250
 
     key = jax.random.PRNGKey(69420)
-    params = linears_from_array([784, 100, 100, 100, 10], key=key)
 
-    model_teacher = create_model(copy.deepcopy(params))
-    model_student_along = create_model(copy.deepcopy(params))
-    model_student_final = create_model(copy.deepcopy(params))
+    model_teacher = presets.Resnet1_mnist(key)
+    model_student_along = presets.Resnet1_mnist(key)
+    model_student_final = presets.Resnet1_mnist(key)
 
     train_data, test_data = loader.load_mnist_raw()
     train_x, train_y = train_data
@@ -101,7 +77,7 @@ if __name__ == '__main__':
             div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
             student_epochs_along_divergence.append(div_stud_along_teacher)
 
-        
+
     print("After student epochs:")
 
 #    train_student_y_final = model_teacher.forward(model_teacher.params, random_noise)
@@ -117,7 +93,7 @@ if __name__ == '__main__':
     acc_test = model_teacher.accuracy(test_x, test_y)
     print("Accuracy teacher on training data: {}%".format(acc_train))
     print("Accuracy teacher on test data: {}%".format(acc_test))
- 
+
     acc_train = model_student_along.accuracy(train_x, train_y)
     acc_test = model_student_along.accuracy(test_x, test_y)
     print("Accuracy live student on training data: {}%".format(acc_train))
@@ -144,4 +120,3 @@ if __name__ == '__main__':
     plt.clf()
     plt.plot(accuracies, label='accuracies')
     plt.show()
-
