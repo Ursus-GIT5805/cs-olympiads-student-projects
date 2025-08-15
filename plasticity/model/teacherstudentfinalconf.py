@@ -224,9 +224,10 @@ if __name__ == '__main__':
         # for student_epoch in range(student_epochs):
         # print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
         current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
+        print(current_student_epochs)
         model_student_along.train(
             random_noise_step, train_student_y,
-            epochs=current_student_epochs, batch_size=batch_size,
+            epochs=student_epochs, batch_size=batch_size,
             optimizer = optax.sgd(learning_rate=0.1),
             #return_score=True,
             #evaluate=(test_x, test_y),
