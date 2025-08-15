@@ -128,6 +128,7 @@ class Model:
         evaluate=None, # Prints a list of losses corresponding to the given test data
         seed=42,
         batches=None,
+        verbose=True,
         l2=False,
         l2_eps=1e-4,
     ):
@@ -152,7 +153,8 @@ class Model:
             self.assert_data_shape(tx, ty)
 
         for epoch in range(epochs):
-            print("Epoch {}/{}".format(epoch+1, epochs))
+            if verbose:
+                print("Epoch {}/{}".format(epoch+1, epochs))
 
             key = jax.random.PRNGKey(seed)
             train_x = jax.random.permutation(key, train_x, axis=0)
@@ -169,9 +171,11 @@ class Model:
                 batch_size=batch_size
             )
 
+            if return_score:
+                scores.append(jnp.mean(loss))
+
             if evaluate:
                 loss, _ = jax.value_and_grad(loss_fn)(self.params, tx, ty)
-                # scores.append(loss)
                 print("Loss: {}".format(loss))
 
         if return_score:
