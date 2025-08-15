@@ -215,7 +215,7 @@ if __name__ == '__main__':
         random_noise_all = random_noise[:(epoch+1)*noise_amount_step]
 
         print(random_noise_step.device)
-        train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
+        train_student_y = model_teacher.forward(model_teacher.params, random_noise_all)
 
         teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
         model_student_bright = presets.Resnet1_mnist(key)
