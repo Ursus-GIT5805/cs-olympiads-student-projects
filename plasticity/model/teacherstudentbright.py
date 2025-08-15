@@ -68,7 +68,7 @@ if __name__ == '__main__':
             # print("Epoch: {}/{}".format(student_epoch+1, student_epochs_real))
         model_student_along.train(
             random_noise_step, train_student_y,
-            epochs=student_epochs_real, batch_size=batch_size,
+            epochs=student_epochs, batch_size=batch_size,
             optimizer = optax.sgd(learning_rate=0.1),
             #return_score=True,
             #evaluate=(test_x, test_y),
@@ -84,13 +84,13 @@ if __name__ == '__main__':
     print("After student epochs:")
 
     train_student_y_final = model_teacher.forward(model_teacher.params, random_noise)
-    model_student_final.train(
-        random_noise, train_student_y_final,
-        epochs=student_final_epochs, batch_size=batch_size,
-        optimizer = optax.sgd(learning_rate=0.1),
-        return_score=False,
-        # evaluate=(test_x, test_y),
-    )
+    # model_student_final.train(
+    #     random_noise, train_student_y_final,
+    #     epochs=student_final_epochs, batch_size=batch_size,
+    #     optimizer = optax.sgd(learning_rate=0.1),
+    #     return_score=False,
+    #     # evaluate=(test_x, test_y),
+    # )
 #
     acc_train = model_teacher.accuracy(train_x, train_y)
     acc_test = model_teacher.accuracy(test_x, test_y)
