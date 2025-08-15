@@ -188,7 +188,7 @@ if __name__ == '__main__':
     train_teacher_x, train_teacher_y = train_data
     # train_student_x, _ = train_student
     test_x, test_y = test_data
-    random_noise = jax.random.uniform(key, shape=(60000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
+    random_noise = jax.random.uniform(key, shape=(noise_amount_step * teacher_epochs, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
 
     key2 = jax.random.PRNGKey(69)
     random_noise_test = jax.random.uniform(key2, shape=(40000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
@@ -258,7 +258,7 @@ if __name__ == '__main__':
     acc_test = model_student_along.accuracy(test_x, test_y)
     print("Accuracy live student on training data: {}%".format(acc_train))
     print("Accuracy live student on test data: {}%".format(acc_test))
-    print([float(x) for x in div_stud_along_teacher])
+    print([float(x) for x in student_epochs_along_divergence])
 #
 #    acc_train = model_student_final.accuracy(train_x, train_y)
 #    acc_test = model_student_final.accuracy(test_x, test_y)
