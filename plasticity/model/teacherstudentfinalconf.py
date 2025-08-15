@@ -221,18 +221,19 @@ if __name__ == '__main__':
         print("Live student epochs:")
         # for student_epoch in range(student_epochs):
         # print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
-        model_student_along.train(
+        model_student_bright = presets.Resnet1_mnist(key)
+        model_student_bright.train(
             random_noise_step, train_student_y,
-            epochs=student_epochs, batch_size=batch_size,
+            epochs=student_epochs*(epoch+1), batch_size=batch_size,
             optimizer = optax.sgd(learning_rate=0.1),
             #return_score=True,
             #evaluate=(test_x, test_y),
         )
         protest_y = model_teacher.forward(model_teacher.params, test_x)
-        along_student_acc = model_student_along.accuracy(test_x, protest_y)
+        along_student_acc = model_student_bright.accuracy(test_x, protest_y)
         accuracies.append(along_student_acc/100)
 
-        along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
+        along_student_data = model_student_bright.forward(model_student_bright.params, random_noise_test)
         div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
         student_epochs_along_divergence.append(div_stud_along_teacher)
 
