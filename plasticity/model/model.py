@@ -39,10 +39,22 @@ def squaredmean_cost(a, y):
 
 # ===== Training =====
 
-def _gen_loss_function(run, cost):
-    def loss_fn(params, x, y):
-        a = run(params, x)
-        return cost(a, y)
+def _gen_loss_function(
+        run,
+        cost,
+        l2=False,
+        l2_eps=1e-4
+):
+    if l2:
+        def loss_fn(params, x, y):
+            a = run(params, x)
+            l2_loss = sum(jnp.sum(p**2) for p in jax.tree_util.tree_leaves(params))
+            return cost(a, y) + l2_loss*l2_eps
+
+    else:
+        def loss_fn(params, x, y):
+            a = run(params, x)
+            return cost(a, y)
 
     return jax.jit(loss_fn)
 
@@ -116,6 +128,8 @@ class Model:
         evaluate=None, # Prints a list of losses corresponding to the given test data
         seed=42,
         batches=None,
+        l2=False,
+        l2_eps=1e-4,
     ):
         n = train_x.shape[0]
 
@@ -131,7 +145,7 @@ class Model:
             batch_size = train_x.shape[0] // batches
 
         scores = []
-        loss_fn = _gen_loss_function(self.forward, cost)
+        loss_fn = _gen_loss_function(self.forward, cost, l2=l2, l2_eps=l2_eps)
 
         if evaluate:
             tx, ty = evaluate
@@ -139,7 +153,7 @@ class Model:
 
         for epoch in range(epochs):
             print("Epoch {}/{}".format(epoch+1, epochs))
-            
+
             key = jax.random.PRNGKey(seed)
             train_x = jax.random.permutation(key, train_x, axis=0)
             train_y = jax.random.permutation(key, train_y, axis=0)
@@ -161,7 +175,9 @@ class Model:
                 print("Loss: {}".format(loss))
 
         if return_score:
-            return scores
+            return scores, opt_state
+
+        return opt_state
 
     def loss(
         self,
