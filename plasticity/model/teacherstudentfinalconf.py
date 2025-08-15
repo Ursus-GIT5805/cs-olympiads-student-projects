@@ -211,26 +211,27 @@ if __name__ == '__main__':
         )
 
         # the_key = jax.random.PRNGKey(epoch)
-        random_noise_step = random_noise[epoch*noise_amount_step:(epoch+1)*noise_amount_step]
-        random_noise_all = random_noise[:(epoch+1)*noise_amount_step]
+        
+        # random_noise_all = random_noise[:(epoch+1)*noise_amount_step]
 
-        print(random_noise_step.device)
-        train_student_y = model_teacher.forward(model_teacher.params, random_noise_all)
+        
 
         teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
         model_student_bright = presets.Resnet1_mnist(key)
  
 
         print("Live student epochs:")
-        # for student_epoch in range(student_epochs):
+        for student_epoch in range(epoch+1):
         # print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
-        model_student_bright.train(
-            random_noise_all, train_student_y,
-            epochs=student_epochs, batch_size=batch_size,
-            optimizer = optax.sgd(learning_rate=0.1),
-            #return_score=True,
-            #evaluate=(test_x, test_y),
-        )
+            random_noise_step = random_noise[student_epoch*noise_amount_step:(student_epoch+1)*noise_amount_step]
+            train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
+            model_student_bright.train(
+                random_noise_step, train_student_y,
+                epochs=student_epochs, batch_size=batch_size,
+                optimizer = optax.sgd(learning_rate=0.1),
+                #return_score=True,
+                #evaluate=(test_x, test_y),
+            )
         protest_y = model_teacher.forward(model_teacher.params, test_x)
         along_student_acc = model_student_bright.accuracy(test_x, protest_y)
         accuracies.append(along_student_acc/100)
