@@ -4,22 +4,21 @@ import optax
 
 import loader
 from linear import *
-from model import Model
-from model import batch_norm
 from model import kl_divergence
 from model import squaredmean_cost
 import presets
 
 import matplotlib.pyplot as plt
-import copy
 import random
 
 if __name__ == '__main__':
-    teacher_epochs = 15
+#with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
+    teacher_epochs = 10
     student_epochs = 30
-    student_final_epochs = teacher_epochs*student_epochs
-    noise_amount_step = 40000
-    batch_size = 250
+    #student_final_epochs = teacher_epochs*student_epochs
+    student_final_epochs = 0
+    noise_amount_step = 60000
+    batch_size = 125
 
     key = jax.random.PRNGKey(69420)
 
@@ -46,7 +45,7 @@ if __name__ == '__main__':
         model_teacher.train(
             train_x, train_y,
             epochs=1, batch_size=batch_size,
-            optimizer=optax.sgd(learning_rate=0.1),
+            optimizer=optax.sgd(learning_rate=0.07),
             return_score=False,
             cost=squaredmean_cost,
             # evaluate=(test_x, test_y),
@@ -61,8 +60,12 @@ if __name__ == '__main__':
         teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
 
         print("Live student epochs:")
-        for student_epoch in range(student_epochs):
-            print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
+        student_epochs_real = round(-20*math.exp(-0.30*epoch) + 30)
+        print(student_epochs_real)
+        student_final_epochs += student_epochs_real
+
+        for student_epoch in range(student_epochs_real):
+            print("Epoch: {}/{}".format(student_epoch+1, student_epochs_real))
             model_student_along.train(
                 random_noise_step, train_student_y,
                 epochs=1, batch_size=batch_size,
@@ -80,14 +83,14 @@ if __name__ == '__main__':
 
     print("After student epochs:")
 
-#    train_student_y_final = model_teacher.forward(model_teacher.params, random_noise)
-#    model_student_final.train(
-#        random_noise, train_student_y_final,
-#        epochs=student_final_epochs, batch_size=batch_size,
-#        optimizer = optax.sgd(learning_rate=0.1),
-#        return_score=False,
-#        # evaluate=(test_x, test_y),
-#    )
+    train_student_y_final = model_teacher.forward(model_teacher.params, random_noise)
+    model_student_final.train(
+        random_noise, train_student_y_final,
+        epochs=student_final_epochs, batch_size=batch_size,
+        optimizer = optax.sgd(learning_rate=0.1),
+        return_score=False,
+        # evaluate=(test_x, test_y),
+    )
 #
     acc_train = model_teacher.accuracy(train_x, train_y)
     acc_test = model_teacher.accuracy(test_x, test_y)
@@ -106,17 +109,15 @@ if __name__ == '__main__':
 #
 #
 #    teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
-#    along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
-#    final_student_data = model_student_final.forward(model_student_final.params, random_noise_test)
-#
-#    div_stud_follow_teacher = kl_divergence(q=along_student_data, p=teacher_data)
-#    div_stud_final_teacher = kl_divergence(q=final_student_data, p=teacher_data)
-#
-#    print("Divergence of live student to teacher: {}".format(div_stud_follow_teacher))
-#    print("Divergence of after student to teacher: {}".format(div_stud_final_teacher))
+    along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
+    final_student_data = model_student_final.forward(model_student_final.params, random_noise_test)
+
+    div_stud_follow_teacher = kl_divergence(q=along_student_data, p=teacher_data)
+    div_stud_final_teacher = kl_divergence(q=final_student_data, p=teacher_data)
+
+    print("Divergence of live student to teacher: {}".format(div_stud_follow_teacher))
+    print("Divergence of after student to teacher: {}".format(div_stud_final_teacher))
 
     plt.plot(student_epochs_along_divergence, label='divergence')
-    plt.show()
-    plt.clf()
-    plt.plot(accuracies, label='accuracies')
+    plt.grid()
     plt.show()
