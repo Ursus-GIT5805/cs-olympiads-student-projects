@@ -127,7 +127,7 @@ class Model:
 
         for epoch in range(epochs):
             print("Epoch {}/{}".format(epoch+1, epochs))
-
+            
             key = jax.random.PRNGKey(seed)
             train_x = jax.random.permutation(key, train_x, axis=0)
             train_y = jax.random.permutation(key, train_y, axis=0)
