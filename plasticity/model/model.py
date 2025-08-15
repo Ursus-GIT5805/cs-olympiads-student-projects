@@ -15,13 +15,16 @@ def batch_norm(x):
 
 # =====
 
-
 @jax.jit
 def kl_divergence(p, q):
     eps=1e-12
     p = jnp.clip(p, eps, 1.0)
     q = jnp.clip(q, eps, 1.0)
     return jnp.mean(p * (jnp.log(p) - jnp.log(q)))
+
+@jax.jit
+def kl_divergence_cost(a, y):
+    return kl_divergence(y, a)
 
 # =====
 
