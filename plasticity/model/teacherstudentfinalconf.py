@@ -83,16 +83,16 @@ if __name__ == '__main__':
         # random_noise_step = random_noise[epoch*noise_amount_step:(epoch+1)*noise_amount_step]
         # print(random_noise_step.device)
         # train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
-        train_student_y = model_teacher.forward(model_teacher.params, train_student_x)
+        train_student_y = model_teacher.evaluate(train_student_x)
 
-        teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
+        teacher_data = model_teacher.evaluate(random_noise_test)
 
         print("Live student epochs:")
         for student_epoch in range(student_epochs):
             print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
             model_student_along.train(
                 train_student_x, train_student_y,
-                epochs=1, batch_size=batch_size,
+                epochs=student_epochs, batch_size=batch_size,
                 optimizer = optax.sgd(learning_rate=0.1),
                 #return_score=True,
                 #evaluate=(test_x, test_y),
@@ -141,10 +141,15 @@ if __name__ == '__main__':
 #
 #    print("Divergence of live student to teacher: {}".format(div_stud_follow_teacher))
 #    print("Divergence of after student to teacher: {}".format(div_stud_final_teacher))
-
-    plt.plot(student_epochs_along_divergence, label='divergence')
-    plt.show()
+    print(student_epochs_along_divergence)
+    plt.plot(student_epochs_along_divergence, label='Student')
+    plt.xlabel("Epochs")
+    plt.ylabel("KL Divergence")
+    plt.figtext(0, 0, "KL Divergence between teacher and student  with student having 30 epochs \n for each teacher epoch with optimizer sgd  and learning rate 0.1",fontsize=10)
+    # plt.figtext(0, 0, "Weight Magnitudefor every student epoch (sgd with 0.2 learning rate)", fontsize = 10)
+    plt.grid()
     plt.clf()
-    plt.plot(accuracies, label='accuracies')
+    plt.legend()
+    # plt.plot(accuracies, label='accuracies')
     plt.show()
 
