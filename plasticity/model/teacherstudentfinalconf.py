@@ -188,7 +188,7 @@ if __name__ == '__main__':
     train_teacher_x, train_teacher_y = train_data
     # train_student_x, _ = train_student
     test_x, test_y = test_data
-    random_noise = jax.random.uniform(key, shape=(noise_amount_step * teacher_epochs, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
+    random_noise = jax.random.uniform(key, shape=(60000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
 
     key2 = jax.random.PRNGKey(69)
     random_noise_test = jax.random.uniform(key2, shape=(40000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
