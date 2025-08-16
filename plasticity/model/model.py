@@ -131,6 +131,7 @@ class Model:
         verbose=True,
         l2=False,
         l2_eps=1e-4,
+        eval_fn=None,
     ):
         n = train_x.shape[0]
 
@@ -147,6 +148,9 @@ class Model:
 
         scores = []
         loss_fn = _gen_loss_function(self.forward, cost, l2=l2, l2_eps=l2_eps)
+        if not eval_fn:
+            eval_fn = cost
+        eval_fn = _gen_loss_function(self.forward, eval_fn, l2=l2, l2_eps=l2_eps)
 
         if evaluate:
             tx, ty = evaluate
@@ -175,7 +179,8 @@ class Model:
                 scores.append(jnp.mean(loss))
 
             if evaluate:
-                loss, _ = jax.value_and_grad(loss_fn)(self.params, tx, ty)
+                loss, _ = jax.value_and_grad(eval_fn)(self.params, tx, ty)
+                scores.append(loss)
                 print("Loss: {}".format(loss))
 
         if return_score:
