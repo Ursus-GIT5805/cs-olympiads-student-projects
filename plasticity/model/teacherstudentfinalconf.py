@@ -168,9 +168,9 @@ import presets
 import matplotlib.pyplot as plt
 import copy
 import random
-
+import math
 def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
-    return int(minepoch+(total_student_epochs-minepoch)*(epoch/(teacher_epochs-1)))
+    return int(minepoch + (total_student_epochs-minepoch) * 0.5 * (1 - math.cos(math.pi * epoch/(teacher_epochs-1))))
 
 if __name__ == '__main__':
     teacher_epochs = 30
