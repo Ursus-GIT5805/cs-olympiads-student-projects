@@ -159,10 +159,10 @@ import optax
 
 import loader
 from linear import *
-from newmodel import Model
-from newmodel import batch_norm
-from newmodel import kl_divergence
-from newmodel import squaredmean_cost
+from model import Model
+from model import batch_norm
+from model import kl_divergence
+from model import squaredmean_cost
 import presets
 
 import matplotlib.pyplot as plt
