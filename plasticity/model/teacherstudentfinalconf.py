@@ -212,8 +212,8 @@ if __name__ == '__main__':
             cost=squaredmean_cost,
             # evaluate=(test_x, test_y),
             seed=random.randint(0, int(1e7)),
-            # gamma=1,
-            # p_slow=0
+            gamma=1,
+            p_slow=0
         )
         
         # the_key = jax.random.PRNGKey(epoch)
@@ -233,8 +233,8 @@ if __name__ == '__main__':
             random_noise_step, train_student_y,
             epochs=student_epochs, batch_size=batch_size,
             optimizer = optax.sgd(learning_rate=0.1),
-            # gamma=0.3,
-            # p_slow=0.05
+            # gamma=0.9,
+            # p_slow=0.
             #return_score=True,
             #evaluate=(test_x, test_y),
         )
