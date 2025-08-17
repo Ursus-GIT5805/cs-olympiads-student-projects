@@ -15,37 +15,30 @@ def batch_norm(x):
 
 # =====
 def _tree_random_keys(key, pytree):
-    """Generate a pytree of PRNGKeys matching the shape of params."""
     leaves, treedef = jax.tree_util.tree_flatten(pytree)
     keys = jax.random.split(key, len(leaves))
     return jax.tree_util.tree_unflatten(treedef, keys)
 
 def reset_weights_normal(params, key, p=0.2):
     """
-    Reset each weight element with probability p.
-    Biases are left untouched.
-    Re-initialization matches your `linear` initializer:
-      - weights: N(0, 1/sqrt(in_features))
+    Re-init each WEIGHT element with prob p to N(0, 1/sqrt(in_features)).
+    Biases (1D arrays) remain unchanged.
     """
     key_tree = _tree_random_keys(key, params)
 
-    def reset_leaf(param, k):
-        if isinstance(param, tuple) and len(param) == 2:
-            w, b = param
-            kw, _ = jax.random.split(k)
+    def reset_array(x, k):
+        if x.ndim == 2:  # treat as weight matrix
+            in_features = x.shape[0]
+            scale = 1.0 / jnp.sqrt(in_features)
+            k_mask, k_noise = jax.random.split(k)
+            mask  = jax.random.bernoulli(k_mask, p, x.shape)
+            x_new = jax.random.normal(k_noise, x.shape) * scale
+            return jnp.where(mask, x_new, x)
+        else:
+            return x  # biases or other non-2D leaves
 
-            # reinit weight
-            scale = 1.0 / jnp.sqrt(w.shape[0])
-            w_mask = jax.random.bernoulli(kw, p, shape=w.shape)
-            w_new = jax.random.normal(kw, w.shape) * scale
-            w = jnp.where(w_mask, w_new, w)
+    return jax.tree_util.tree_map(reset_array, params, key_tree)
 
-            # keep bias as is
-            return (w, b)
-
-        return param
-
-    return jax.tree_util.tree_map(reset_leaf, params, key_tree)
 @jax.jit
 def kl_divergence(p, q):
     eps=1e-12
