@@ -434,7 +434,8 @@ def _gen_loss_function_with_si(model, run, base_cost, l2=False, l2_eps=1e-4):
     return jax.jit(loss_fn)
 
 
-@partial(jax.jit, static_argnames=('optimizer', 'loss_fn', 'batches', 'batch_size'))
+@partial(jax.jit, static_argnames=('optimizer', 'loss_fn', 'batches', 'batch_size', 'si_on'))
+
 def train_epoch(params, opt_state, x, y, optimizer, loss_fn, batches, batch_size,
                 si_on=False, si_path=None):
 
