@@ -116,7 +116,7 @@ class Model:
             )
     def resetsubset(self):
         for param in self.params:
-            print(len(param))
+            print(param[0].shape)
     def train(
         self,
         train_x,
