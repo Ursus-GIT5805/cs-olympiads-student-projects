@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 import optax
-
+import random
 import dill as pickle
 
 from dataclasses import dataclass
@@ -14,7 +14,38 @@ def batch_norm(x):
     return jnp.nan_to_num((x-mean) / jnp.sqrt(var))
 
 # =====
+def _tree_random_keys(key, pytree):
+    """Generate a pytree of PRNGKeys matching the shape of params."""
+    leaves, treedef = jax.tree_util.tree_flatten(pytree)
+    keys = jax.random.split(key, len(leaves))
+    return jax.tree_util.tree_unflatten(treedef, keys)
 
+def reset_weights_normal(params, key, p=0.2):
+    """
+    Reset each weight element with probability p.
+    Biases are left untouched.
+    Re-initialization matches your `linear` initializer:
+      - weights: N(0, 1/sqrt(in_features))
+    """
+    key_tree = _tree_random_keys(key, params)
+
+    def reset_leaf(param, k):
+        if isinstance(param, tuple) and len(param) == 2:
+            w, b = param
+            kw, _ = jax.random.split(k)
+
+            # reinit weight
+            scale = 1.0 / jnp.sqrt(w.shape[0])
+            w_mask = jax.random.bernoulli(kw, p, shape=w.shape)
+            w_new = jax.random.normal(kw, w.shape) * scale
+            w = jnp.where(w_mask, w_new, w)
+
+            # keep bias as is
+            return (w, b)
+
+        return param
+
+    return jax.tree_util.tree_map(reset_leaf, params, key_tree)
 @jax.jit
 def kl_divergence(p, q):
     eps=1e-12
@@ -114,10 +145,18 @@ class Model:
                 "Output most be of shape {}, not {}"
                 .format(n, self.output_dim, y.shape)
             )
-    def resetsubset(self):
-        for param in self.params:
-            for w in param[0]:
-                print(len(w))
+    # def resetsubset(self):
+    #     newparams=[]
+    #     for param in self.params:
+    #         newparamweights=0
+    #         for w1 in param[0]:
+    #             for w2 in w1:
+    #                 if(random.random()<0.2):
+    
+    def model_reset_subset(self, p=0.2, seed=0):
+        key = jax.random.PRNGKey(seed)
+        self.params = reset_weights_normal(self.params, key, p=p)
+
     def train(
         self,
         train_x,

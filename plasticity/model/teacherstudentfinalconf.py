@@ -198,86 +198,86 @@ if __name__ == '__main__':
 
     student_epochs_along_divergence = []
     accuracies = []
-    model_student_along.resetsubset()
+    # model_student_along.resetsubset()
 
-#     for epoch in range(teacher_epochs):
-#         print("Teacher epochs {}/{}".format(epoch+1, teacher_epochs))
+    for epoch in range(teacher_epochs):
+        print("Teacher epochs {}/{}".format(epoch+1, teacher_epochs))
 
-#         print("Teacher learning")
-#         model_teacher.train(
-#             train_teacher_x, train_teacher_y,
-#             epochs=1, batch_size=batch_size,
-#             optimizer=optax.sgd(learning_rate=0.1),
-#             return_score=False,
-#             cost=squaredmean_cost,
-#             # evaluate=(test_x, test_y),
-#             seed=random.randint(0, int(1e7))
-#         )
+        print("Teacher learning")
+        model_teacher.train(
+            train_teacher_x, train_teacher_y,
+            epochs=1, batch_size=batch_size,
+            optimizer=optax.sgd(learning_rate=0.1),
+            return_score=False,
+            cost=squaredmean_cost,
+            # evaluate=(test_x, test_y),
+            seed=random.randint(0, int(1e7))
+        )
         
-#         # the_key = jax.random.PRNGKey(epoch)
-#         random_noise_step = random_noise[epoch*noise_amount_step:(epoch+1)*noise_amount_step]
-#         print(random_noise_step.device)
-#         train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
+        # the_key = jax.random.PRNGKey(epoch)
+        random_noise_step = random_noise[epoch*noise_amount_step:(epoch+1)*noise_amount_step]
+        print(random_noise_step.device)
+        train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
 
-#         teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
+        teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
 
-#         print("Live student epochs:")
-#         # for student_epoch in range(student_epochs):
-#         # print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
-#         current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
-#         print(current_student_epochs)
-        
-#         model_student_along.train(
-#             random_noise_step, train_student_y,
-#             epochs=student_epochs, batch_size=batch_size,
-#             optimizer = optax.sgd(learning_rate=0.1),
-#             #return_score=True,
-#             #evaluate=(test_x, test_y),
-#         )
-#         along_student_acc = model_student_along.accuracy(test_x, test_y)
-#         accuracies.append(along_student_acc/100)
+        print("Live student epochs:")
+        # for student_epoch in range(student_epochs):
+        # print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
+        current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
+        print(current_student_epochs)
+        model_student_along.model_reset_subset(seed=random.randint(0, int(1e7)))
+        model_student_along.train(
+            random_noise_step, train_student_y,
+            epochs=student_epochs, batch_size=batch_size,
+            optimizer = optax.sgd(learning_rate=0.1),
+            #return_score=True,
+            #evaluate=(test_x, test_y),
+        )
+        along_student_acc = model_student_along.accuracy(test_x, test_y)
+        accuracies.append(along_student_acc/100)
 
-#         along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
-#         div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
-#         student_epochs_along_divergence.append(div_stud_along_teacher)
+        along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
+        div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
+        student_epochs_along_divergence.append(div_stud_along_teacher)
 
 
-#     print("After student epochs:")
+    print("After student epochs:")
 
-# #    train_student_y_final = model_teacher.forward(model_teacher.params, random_noise)
-# #    model_student_final.train(
-# #        random_noise, train_student_y_final,
-# #        epochs=student_final_epochs, batch_size=batch_size,
-# #        optimizer = optax.sgd(learning_rate=0.1),
-# #        return_score=False,
-# #        # evaluate=(test_x, test_y),
-# #    )
-# #
-#     acc_train = model_teacher.accuracy(train_teacher_x, train_teacher_y)
-#     acc_test = model_teacher.accuracy(test_x, test_y)
-#     print("Accuracy teacher on training data: {}%".format(acc_train))
-#     print("Accuracy teacher on test data: {}%".format(acc_test))
+#    train_student_y_final = model_teacher.forward(model_teacher.params, random_noise)
+#    model_student_final.train(
+#        random_noise, train_student_y_final,
+#        epochs=student_final_epochs, batch_size=batch_size,
+#        optimizer = optax.sgd(learning_rate=0.1),
+#        return_score=False,
+#        # evaluate=(test_x, test_y),
+#    )
+#
+    acc_train = model_teacher.accuracy(train_teacher_x, train_teacher_y)
+    acc_test = model_teacher.accuracy(test_x, test_y)
+    print("Accuracy teacher on training data: {}%".format(acc_train))
+    print("Accuracy teacher on test data: {}%".format(acc_test))
 
-#     acc_train = model_student_along.accuracy(train_teacher_x, train_teacher_y)
-#     acc_test = model_student_along.accuracy(test_x, test_y)
-#     print("Accuracy live student on training data: {}%".format(acc_train))
-#     print("Accuracy live student on test data: {}%".format(acc_test))
-#     print([float(x) for x in student_epochs_along_divergence])
-# #
-# #    acc_train = model_student_final.accuracy(train_x, train_y)
-# #    acc_test = model_student_final.accuracy(test_x, test_y)
-# #    print("Accuracy after student on training data: {}%".format(acc_train))
-# #    print("Accuracy after student on test data: {}%".format(acc_test))
-# #
-# #
-# #    teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
-# #    along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
-# #    final_student_data = model_student_final.forward(model_student_final.params, random_noise_test)
-# #
-# #    div_stud_follow_teacher = kl_divergence(q=along_student_data, p=teacher_data)
-# #    div_stud_final_teacher = kl_divergence(q=final_student_data, p=teacher_data)
-# #
-# #    print("Divergence of live student to teacher: {}".format(div_stud_follow_teacher))
-# #    print("Divergence of after student to teacher: {}".format(div_stud_final_teacher))
+    acc_train = model_student_along.accuracy(train_teacher_x, train_teacher_y)
+    acc_test = model_student_along.accuracy(test_x, test_y)
+    print("Accuracy live student on training data: {}%".format(acc_train))
+    print("Accuracy live student on test data: {}%".format(acc_test))
+    print([float(x) for x in student_epochs_along_divergence])
+#
+#    acc_train = model_student_final.accuracy(train_x, train_y)
+#    acc_test = model_student_final.accuracy(test_x, test_y)
+#    print("Accuracy after student on training data: {}%".format(acc_train))
+#    print("Accuracy after student on test data: {}%".format(acc_test))
+#
+#
+#    teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
+#    along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
+#    final_student_data = model_student_final.forward(model_student_final.params, random_noise_test)
+#
+#    div_stud_follow_teacher = kl_divergence(q=along_student_data, p=teacher_data)
+#    div_stud_final_teacher = kl_divergence(q=final_student_data, p=teacher_data)
+#
+#    print("Divergence of live student to teacher: {}".format(div_stud_follow_teacher))
+#    print("Divergence of after student to teacher: {}".format(div_stud_final_teacher))
 
-#     # plt.plot(student_epochs_along_divergence, label='divergence')
+    # plt.plot(student_epochs_along_divergence, label='divergence')
