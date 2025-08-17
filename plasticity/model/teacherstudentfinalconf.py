@@ -182,7 +182,7 @@ if __name__ == '__main__':
     key = jax.random.PRNGKey(69420)
     
     model_teacher = presets.Resnet1_mnist(key)
-    model_student_along = presets.Resnet1_mnist(key)
+    # model_student_along = presets.Resnet1_mnist(key)
     model_student_final = presets.Resnet1_mnist(key)
 
     train_data, test_data = loader.load_mnist_raw()
@@ -226,7 +226,7 @@ if __name__ == '__main__':
         # print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
         current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
         print(current_student_epochs)
-        model_student_along.model_reset_subset(p=1, seed=random.randint(0, int(1e7)))
+        model_student_along = presets.Resnet1_mnist(key)    
         model_student_along.train(
             random_noise_step, train_student_y,
             epochs=student_epochs, batch_size=batch_size,
