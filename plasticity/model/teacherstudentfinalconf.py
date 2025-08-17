@@ -173,8 +173,8 @@ def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
     return int(minepoch + (total_student_epochs-minepoch) * 0.5 * (1 - math.cos(math.pi * epoch/(teacher_epochs-1))))
 
 if __name__ == '__main__':
-    student_epochs = 15
     teacher_epochs = 30
+    student_epochs = 15
     student_final_epochs = teacher_epochs*student_epochs
     noise_amount_step = 40000
     batch_size = 250
@@ -186,7 +186,7 @@ if __name__ == '__main__':
     model_student_final = presets.Resnet1_mnist(key)
 
     train_data, test_data = loader.load_mnist_raw()
-    model_student_along.si_enable(lam=1.0, xi=0.1)  # tune lam∈[0.3,3.0], xi≈0.1–1.0
+
 
     train_teacher_x, train_teacher_y = train_data
     # train_student_x, _ = train_student
@@ -229,8 +229,6 @@ if __name__ == '__main__':
         current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
         print(current_student_epochs)
         # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
-        model_student_along.si_start_phase()
-
         model_student_along.train(
             random_noise_step, train_student_y,
             epochs=student_epochs, batch_size=batch_size,
@@ -240,8 +238,6 @@ if __name__ == '__main__':
             #return_score=True,
             #evaluate=(test_x, test_y),
         )
-        model_student_along.si_end_phase()
-
         along_student_acc = model_student_along.accuracy(test_x, test_y)
         accuracies.append(along_student_acc/100)
 
