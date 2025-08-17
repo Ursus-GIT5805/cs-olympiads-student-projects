@@ -505,7 +505,7 @@ class Model:
         # slow-down controls:
         p_slow=0.2,             # fraction of params to slow next epoch
         gamma=0.3,              # scale factor for slowed updates (0<gamma<1)
-        weights_only=False,     # slow only weights (2D leaves) if True
+        weights_only=True,     # slow only weights (2D leaves) if True
     ):
         n = train_x.shape[0]
         if opt_state is None:
