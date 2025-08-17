@@ -114,7 +114,9 @@ class Model:
                 "Output most be of shape {}, not {}"
                 .format(n, self.output_dim, y.shape)
             )
-
+    def resetsubset(self):
+        for param in self.params:
+            print(len(param))
     def train(
         self,
         train_x,
