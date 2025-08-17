@@ -503,8 +503,8 @@ class Model:
         l2_eps=1e-4,
         eval_fn=None,
         # slow-down controls:
-        p_slow=0.2,             # fraction of params to slow next epoch
-        gamma=0.3,              # scale factor for slowed updates (0<gamma<1)
+        p_slow=0,             # fraction of params to slow next epoch
+        gamma=1,              # scale factor for slowed updates (0<gamma<1)
         weights_only=True,     # slow only weights (2D leaves) if True
     ):
         n = train_x.shape[0]
