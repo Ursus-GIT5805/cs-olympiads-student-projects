@@ -3,7 +3,7 @@ import jax.numpy as jnp
 import optax
 import random
 import dill as pickle
-
+import math
 from dataclasses import dataclass
 from functools import partial
 
