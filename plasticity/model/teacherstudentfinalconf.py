@@ -233,7 +233,7 @@ if __name__ == '__main__':
             random_noise_step, train_student_y,
             epochs=student_epochs, batch_size=batch_size,
             optimizer = optax.sgd(learning_rate=0.1),
-            gamma=0.98,
+            gamma=0.4,
             p_slow=0.1
             #return_score=True,
             #evaluate=(test_x, test_y),
