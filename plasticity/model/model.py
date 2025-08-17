@@ -318,7 +318,6 @@
 #     def load(path):
 #         with open(path, "rb") as f:
 #             return pickle.load(f)
-
 import jax
 import jax.numpy as jnp
 import optax
@@ -409,11 +408,10 @@ def reset_top_by_magnitude(params, key, p=0.2):
 
 @jax.jit
 def kl_divergence(p, q):
-    """KL(P || Q) on probabilities, mean over batch."""
     eps = 1e-12
     p = jnp.clip(p, eps, 1.0)
     q = jnp.clip(q, eps, 1.0)
-    return jnp.mean(jnp.sum(p * (jnp.log(p) - jnp.log(q)), axis=1))
+    return jnp.mean(p * (jnp.log(p) - jnp.log(q)))  # no sum(axis=1)
 
 @jax.jit
 def kl_divergence_cost(a, y):
@@ -647,7 +645,8 @@ class Model:
             if verbose:
                 print("Epoch {}/{}".format(epoch+1, epochs))
 
-            key = jax.random.PRNGKey(seed + epoch)
+            key = jax.random.PRNGKey(seed)
+
             perm = jax.random.permutation(key, n)
             train_x = train_x[perm]
             train_y = train_y[perm]
