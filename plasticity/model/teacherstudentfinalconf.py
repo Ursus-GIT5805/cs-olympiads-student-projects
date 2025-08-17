@@ -211,7 +211,9 @@ if __name__ == '__main__':
             return_score=False,
             cost=squaredmean_cost,
             # evaluate=(test_x, test_y),
-            seed=random.randint(0, int(1e7))
+            seed=random.randint(0, int(1e7)),
+            gamma=1,
+            p_slow=0
         )
         
         # the_key = jax.random.PRNGKey(epoch)
