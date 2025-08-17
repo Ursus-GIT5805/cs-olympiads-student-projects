@@ -14,30 +14,86 @@ def batch_norm(x):
     return jnp.nan_to_num((x-mean) / jnp.sqrt(var))
 
 # =====
-def _tree_random_keys(key, pytree):
-    leaves, treedef = jax.tree_util.tree_flatten(pytree)
+
+def _flatten_leaves(params):
+    leaves, treedef = jax.tree_util.tree_flatten(params)
+    return leaves, treedef
+
+def _concat_abs_and_meta(leaves, kind):
+    """
+    kind: 'weight' -> 2D arrays; 'bias' -> 1D arrays
+    Returns:
+      abs_all: concatenated abs values (1D)
+      metas: list of (idx, shape, is_target) to map back
+    """
+    abs_chunks = []
+    metas = []
+    for i, x in enumerate(leaves):
+        is_weight = (x.ndim == 2)
+        is_bias   = (x.ndim == 1)
+        is_target = (is_weight if kind == 'weight' else is_bias)
+        metas.append((i, x.shape, is_target))
+        if is_target:
+            abs_chunks.append(jnp.abs(jnp.ravel(x)))
+    if abs_chunks:
+        abs_all = jnp.concatenate(abs_chunks, axis=0)
+    else:
+        abs_all = jnp.array([], dtype=leaves[0].dtype if leaves else jnp.float32)
+    return abs_all, metas
+
+def _threshold_for_top_p(abs_all, p):
+    total = abs_all.size
+    k = int(math.floor(p * total))
+    if k <= 0 or total == 0:
+        return None  # no-op
+    # threshold = kth largest value
+    # sort is simplest; for very large arrays you can use jnp.partition
+    sorted_vals = jnp.sort(abs_all)
+    thresh = sorted_vals[-k]  # may include ties
+    return thresh
+
+def reset_top_by_magnitude(params, key, p=0.2):
+    """
+    Reset the top p-fraction (by absolute value) of:
+      - all WEIGHT elements (2D leaves), using N(0, 1/sqrt(in_features))
+      - all BIAS elements (1D leaves), using N(0, 1)
+    Returns new params.
+    """
+    leaves, treedef = _flatten_leaves(params)
+
+    # Compute thresholds separately
+    abs_w_all, metas_w = _concat_abs_and_meta(leaves, 'weight')
+    abs_b_all, metas_b = _concat_abs_and_meta(leaves, 'bias')
+    thresh_w = _threshold_for_top_p(abs_w_all, p)
+    thresh_b = _threshold_for_top_p(abs_b_all, p)
+
+    # PRNG per leaf
     keys = jax.random.split(key, len(leaves))
-    return jax.tree_util.tree_unflatten(treedef, keys)
 
-def reset_weights_normal(params, key, p=0.2):
-    """
-    Re-init each WEIGHT element with prob p to N(0, 1/sqrt(in_features)).
-    Biases (1D arrays) remain unchanged.
-    """
-    key_tree = _tree_random_keys(key, params)
-
-    def reset_array(x, k):
-        if x.ndim == 2:  # treat as weight matrix
+    new_leaves = []
+    for (i, x) in enumerate(leaves):
+        k_leaf = keys[i]
+        if x.ndim == 2 and thresh_w is not None:
+            # weights
             in_features = x.shape[0]
             scale = 1.0 / jnp.sqrt(in_features)
-            k_mask, k_noise = jax.random.split(k)
-            mask  = jax.random.bernoulli(k_mask, p, x.shape)
-            x_new = jax.random.normal(k_noise, x.shape) * scale
-            return jnp.where(mask, x_new, x)
+            # mask top-|x| elements
+            mask = jnp.abs(x) >= thresh_w
+            # reinit values for masked positions
+            noise = jax.random.normal(k_leaf, x.shape) * scale
+            x = jnp.where(mask, noise, x)
+            new_leaves.append(x)
+        elif x.ndim == 1 and thresh_b is not None:
+            # biases
+            mask = jnp.abs(x) >= thresh_b
+            noise = jax.random.normal(k_leaf, x.shape)
+            x = jnp.where(mask, noise, x)
+            new_leaves.append(x)
         else:
-            return x  # biases or other non-2D leaves
+            new_leaves.append(x)
 
-    return jax.tree_util.tree_map(reset_array, params, key_tree)
+    return jax.tree_util.tree_unflatten(treedef, new_leaves)
+
 
 @jax.jit
 def kl_divergence(p, q):
@@ -146,9 +202,12 @@ class Model:
     #             for w2 in w1:
     #                 if(random.random()<0.2):
     
-    def model_reset_subset(self, p=0.2, seed=0):
+    def model_reset_top(self, p=0.2, seed=0):
+        """
+        Reset top-|value| p fraction of weights and biases (separately).
+        """
         key = jax.random.PRNGKey(seed)
-        self.params = reset_weights_normal(self.params, key, p=p)
+        self.params = reset_top_by_magnitude(self.params, key, p=p)
 
     def train(
         self,
