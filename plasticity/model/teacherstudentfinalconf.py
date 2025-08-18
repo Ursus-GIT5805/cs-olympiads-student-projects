@@ -176,7 +176,7 @@ if __name__ == '__main__':
     teacher_epochs = 30
     student_epochs = 15
     student_final_epochs = teacher_epochs*student_epochs
-    noise_amount_step = 4000
+    noise_amount_step = 40000
     batch_size = 100
 
     key = jax.random.PRNGKey(69420)
