@@ -219,7 +219,8 @@ if __name__ == '__main__':
         )
         
         # the_key = jax.random.PRNGKey(epoch)
-        random_noise_step = random_noise[epoch*noise_amount_step:(epoch+1)*noise_amount_step]
+        # random_noise_step = random_noise[epoch*noise_amount_step:(epoch+1)*noise_amount_step]
+        random_noise_step = random_noise
         print(random_noise_step.device)
         train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
 
