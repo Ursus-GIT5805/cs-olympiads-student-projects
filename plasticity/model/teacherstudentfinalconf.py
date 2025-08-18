@@ -181,9 +181,9 @@ if __name__ == '__main__':
 
     key = jax.random.PRNGKey(69420)
     
-    model_teacher = presets.Resnet1_mnist(key)
-    model_student_along = presets.Resnet1_mnist(key)
-    model_student_final = presets.Resnet1_mnist(key)
+    model_teacher = presets.Normal_mnist(key)
+    model_student_along = presets.Normal_mnist(key)
+    model_student_final = presets.Normal_mnist(key)
 
     train_data, test_data = loader.load_mnist_raw()
 
@@ -233,8 +233,8 @@ if __name__ == '__main__':
             random_noise_step, train_student_y,
             epochs=student_epochs, batch_size=batch_size,
             optimizer = optax.sgd(learning_rate=0.1),
-            l2=True,
-            l2_eps=1e-5
+            l2=False,
+            l2_eps=1e-6
             # gamma=0.9,
             # p_slow=0.
             #return_score=True,
