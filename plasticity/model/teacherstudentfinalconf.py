@@ -234,7 +234,7 @@ if __name__ == '__main__':
             epochs=student_epochs, batch_size=batch_size,
             optimizer = optax.sgd(learning_rate=0.1),
             l2=True,
-            l2_eps=1e-6
+            l2_eps=2.5e-6
             # gamma=0.9,
             # p_slow=0.
             #return_score=True,
