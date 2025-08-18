@@ -59,7 +59,7 @@ if __name__ == '__main__':
     fig_acc, ax_acc = plt.subplots()
     ax_acc.set_xlabel("Epochs")
     ax_acc.set_ylabel("Accuracy over test cases")
-
+ 
     fig_w, ax_w = plt.subplots()
     ax_w.set_xlabel("Epochs")
     ax_w.set_ylabel("Total weight")

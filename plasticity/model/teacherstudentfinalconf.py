@@ -174,13 +174,14 @@ def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
 
 if __name__ == '__main__':
     teacher_epochs = 30
-    student_epochs = 10
+    student_epochs = 15
     student_final_epochs = teacher_epochs*student_epochs
     noise_amount_step = 40000
     batch_size = 250
     
     key = jax.random.PRNGKey(69420)
     
+
     model_teacher = presets.Resnet1_mnist(key)
     model_student_along = presets.Resnet1_mnist(key)
     model_student_final = presets.Resnet1_mnist(key)
@@ -199,7 +200,7 @@ if __name__ == '__main__':
     student_epochs_along_divergence = []
     accuracies = []
     # model_student_along.resetsubset()
-
+    opt_state2=optimizer2.init(model_student_along.params)
     for epoch in range(teacher_epochs):
         print("Teacher epochs {}/{}".format(epoch+1, teacher_epochs))
 
@@ -209,7 +210,7 @@ if __name__ == '__main__':
             epochs=1, batch_size=batch_size,
             optimizer=optax.sgd(learning_rate=0.1),
             return_score=False,
-            # cost=crossent,
+            cost=squaredmean_cost,
             # evaluate=(test_x, test_y),
             seed=random.randint(0, int(1e7)),
             # gamma=1,
@@ -229,10 +230,11 @@ if __name__ == '__main__':
         current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
         print(current_student_epochs)
         # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
-        model_student_along.train(
+        opt_state2 = model_student_along.train(
             random_noise_step, train_student_y,
             epochs=student_epochs, batch_size=batch_size,
             optimizer = optimizer2,
+            opt_state=opt_state2,
             # gamma=0.9,
             # p_slow=0.
             #return_score=True,
