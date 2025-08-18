@@ -226,6 +226,7 @@ class Model:
         l2=False,
         l2_eps=1e-4,
         eval_fn=None,
+        wtf=False
     ):
         n = train_x.shape[0]
 
@@ -269,14 +270,16 @@ class Model:
                 batch_size=batch_size
             )
 
-            if return_score:
+            if return_score and not wtf:
                 scores.append(jnp.mean(loss))
 
-            if evaluate:
+            if evaluate and wtf:
                 loss, _ = jax.value_and_grad(eval_fn)(self.params, tx, ty)
                 scores.append(loss)
+                # print(loss)
                 print("Loss: {}".format(loss))
 
+        print(len(scores))
         if return_score:
             return scores, opt_state
 
