@@ -117,6 +117,12 @@ def crossentropy_cost(a, y):
 def squaredmean_cost(a, y):
     return jnp.mean( (a-y) ** 2 )
 
+@jax.jit
+def crossentropy_cost(a, y):
+    eps = 0.001
+    return jnp.mean(-y * jnp.log(a+eps) - (1-y) * jnp.log1p(-a+eps))
+
+
 # ===== Training =====
 
 def _gen_loss_function(
@@ -226,6 +232,7 @@ class Model:
         l2=False,
         l2_eps=1e-4,
         eval_fn=None,
+        wtf=False
     ):
         n = train_x.shape[0]
 
@@ -269,14 +276,16 @@ class Model:
                 batch_size=batch_size
             )
 
-            if return_score:
+            if return_score and not wtf:
                 scores.append(jnp.mean(loss))
 
-            if evaluate:
+            if evaluate and wtf:
                 loss, _ = jax.value_and_grad(eval_fn)(self.params, tx, ty)
                 scores.append(loss)
+                # print(loss)
                 print("Loss: {}".format(loss))
 
+        print(len(scores))
         if return_score:
             return scores, opt_state
 

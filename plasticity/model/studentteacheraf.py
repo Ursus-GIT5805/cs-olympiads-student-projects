@@ -14,16 +14,17 @@ import random
 
 if __name__ == '__main__':
     teacher_epochs = 15
-    student_epochs = 30
+    student_epochs = 10
     student_final_epochs = 0
-    noise_amount_step = 40000
-    batch_size = 125
+    noise_amount_step = 100000
+    batch_size_teacher = 125
+    batch_size = 500
 
     key = jax.random.PRNGKey(69420)
 
-    model_teacher = presets.Resnet2_mnist(key)
-    model_student_along = presets.Resnet2_mnist(key)
-    model_student_final = presets.Resnet2_mnist(key)
+    model_teacher = presets.Resnet1_mnist(key)
+    model_student_along = presets.Resnet1_mnist(key)
+    model_student_final = presets.Resnet1_mnist(key)
 
     train_data, test_data = loader.load_mnist_raw()
     train_x, train_y = train_data
@@ -37,7 +38,7 @@ if __name__ == '__main__':
     student_epochs_along_divergence = []
     accuracies = []
 
-    optimizer = optax.adamw(learning_rate=4e-5, weight_decay=0.1)
+    optimizer = optax.adamw(learning_rate=4e-5, weight_decay=0.0001)
     opt_state = optimizer.init(model_student_along.params)
 
     for epoch in range(teacher_epochs):
@@ -46,8 +47,8 @@ if __name__ == '__main__':
         print("Teacher learning")
         model_teacher.train(
             train_x, train_y,
-            epochs=1, batch_size=batch_size,
-            optimizer=optax.sgd(learning_rate=0.07),
+            epochs=1, batch_size=batch_size_teacher,
+            optimizer=optax.sgd(learning_rate=0.1),
             return_score=False,
             cost=squaredmean_cost,
             # evaluate=(test_x, test_y),
@@ -75,7 +76,8 @@ if __name__ == '__main__':
             opt_state = opt_state,
             return_score=True,
             evaluate=(random_noise_test, teacher_data),
-            eval_fn=kl_divergence_cost
+            eval_fn=kl_divergence_cost,
+            wtf = True
         )
         student_epochs_along_divergence += scores
         # print(len(scores))
