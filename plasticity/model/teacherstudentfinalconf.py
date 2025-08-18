@@ -182,10 +182,10 @@ if __name__ == '__main__':
     key = jax.random.PRNGKey(69420)
     
     model_teacher = presets.Resnet1_mnist(key)
-    model_student_along = presets.Resnet1_mnist(key)
+    
     model_student_final = presets.Resnet1_mnist(key)
-    optimizer = optax.sgd(0.1,0.7)
-    opt_state=optimizer.init(model_student_along.params)
+    
+    
 
     train_data, test_data = loader.load_mnist_raw()
 
@@ -219,7 +219,7 @@ if __name__ == '__main__':
         )
         
         # the_key = jax.random.PRNGKey(epoch)
-        random_noise_step = random_noise[epoch*noise_amount_step:(epoch+1)*noise_amount_step]
+        random_noise_step = random_noise[:(epoch+1)*noise_amount_step]
         print(random_noise_step.device)
         train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
 
@@ -230,6 +230,9 @@ if __name__ == '__main__':
         # print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
         current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
         print(current_student_epochs)
+        model_student_along = presets.Resnet1_mnist(key)
+        optimizer = optax.sgd(0.1,0.7)
+        opt_state=optimizer.init(model_student_along.params)
         # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
         opt_state = model_student_along.train(
             random_noise_step, train_student_y,
