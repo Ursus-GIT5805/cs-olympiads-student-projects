@@ -209,7 +209,7 @@ if __name__ == '__main__':
             epochs=1, batch_size=batch_size,
             optimizer=optax.sgd(learning_rate=0.1),
             return_score=False,
-            cost=squaredmean_cost,
+            # cost=crossent,
             # evaluate=(test_x, test_y),
             seed=random.randint(0, int(1e7)),
             # gamma=1,
