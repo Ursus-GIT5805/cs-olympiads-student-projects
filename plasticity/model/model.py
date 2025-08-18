@@ -117,6 +117,13 @@ def crossentropy_cost(a, y):
 def squaredmean_cost(a, y):
     return jnp.mean( (a-y) ** 2 )
 
+@jax.jit
+def crossentropy_cost(a, y):
+    eps = 0.001
+    l2_strenght=0.3
+    return jnp.mean(-y * jnp.log(a+eps) - (1-y) * jnp.log1p(-a+eps))+l2_strenght*optax.l2_loss
+
+
 # ===== Training =====
 
 def _gen_loss_function(
