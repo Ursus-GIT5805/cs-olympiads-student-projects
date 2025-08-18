@@ -79,7 +79,8 @@ sus3 = [2.3648530259379186e-05, 5.700832116417587e-05, 0.0001025194360408932, 0.
 # print("Accuracy Second Student is {}% more accurate than the first Student".format(acc_student2_vs_student1))
 
 
-
+realrealrealnormal = []
+sus4 = []
 plt.title("KL[Teacher || Student]")
 # plt.figtext(0, 0, "KL Divergence between teacher and student  with student having 15 epochs \n for each teacher epoch with optimizer sgd  and learning rate 0.1", fontsize = 10)
 # plt.plot(student_accs_1em6, label='1e-6 l2 strength')
@@ -88,8 +89,8 @@ plt.title("KL[Teacher || Student]")
 # plt.plot(valrandomalltrainbright, label='Brigh Student')
 # plt.plot(valrandomalltrain, label='Student epochs getting higher')
 # plt.plot(sus, label='Sus')
-plt.plot(newvalnormal, label="normale")
-plt.plot(sus3, label="sus3")
+plt.plot(realrealrealnormal, label="normale")
+plt.plot(sus4, label="sus4")
 
 plt.xlabel("Epoch")
 plt.ylabel("KL[Teacher || Student]")

@@ -41,35 +41,6 @@ def Resnet1_mnist(key):
 
 
 
-def Normal_mnist(key):
-    k1,k2,k3,k4 = jax.random.split(key, 4)
-
-    params = [
-        linear(784, 100, k1),
-        linear(100, 100, k2),
-        linear(100, 100, k3),
-        linear(100, 10, k4),
-    ]
-
-    def run(params, a):
-        a = feedforward_linear(params[0], a)
-
-
-        a = jax.nn.sigmoid(a)
-        a = feedforward_linear(params[1], a)
-        a = jax.nn.sigmoid(a)
-        a = feedforward_linear(params[2], a)
-        a = jax.nn.sigmoid(a)
-        a = feedforward_linear(params[3], a)
-        a = jax.nn.softmax( a )
-        return a
-
-    return Model.init(
-        params,
-        jax.jit(run),
-        input_dim=784,
-        output_dim=10,
-    )
 
 
 def Resnet2_mnist(key):
