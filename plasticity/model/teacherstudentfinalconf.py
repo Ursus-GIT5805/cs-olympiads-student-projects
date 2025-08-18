@@ -219,30 +219,33 @@ if __name__ == '__main__':
         )
         
         # the_key = jax.random.PRNGKey(epoch)
-        random_noise_step = random_noise[epoch*noise_amount_step:(epoch+1)*noise_amount_step]
-        print(random_noise_step.device)
-        train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
+       
 
-        teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
 
         print("Live student epochs:")
         # for student_epoch in range(student_epochs):
         # print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
-        current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
-        print(current_student_epochs)
-        # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
-        opt_state = model_student_along.train(
-            random_noise_step, train_student_y,
-            epochs=student_epochs, batch_size=batch_size,
-            optimizer = optimizer,
-            l2=False,
-            l2_eps=1e-6,
-            opt_state=opt_state
-            # gamma=0.9,
-            # p_slow=0.
-            #return_score=True,
-            #evaluate=(test_x, test_y),
-        )
+        for faketeacherepoch in range(epoch+1):
+            # current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
+            # print(current_student_epochs)
+            # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
+            random_noise_step = random_noise[faketeacherepoch*noise_amount_step:(faketeacherepoch+1)*noise_amount_step]
+            print(random_noise_step.device)
+            train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
+            opt_state = model_student_along.train(
+                random_noise_step, train_student_y,
+                epochs=student_epochs, batch_size=batch_size,
+                optimizer = optimizer,
+                l2=False,
+                l2_eps=1e-6,
+                opt_state=opt_state
+                # gamma=0.9,
+                # p_slow=0.
+                #return_score=True,
+                #evaluate=(test_x, test_y),
+            )
+        teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
+
         along_student_acc = model_student_along.accuracy(test_x, test_y)
         accuracies.append(along_student_acc/100)
 
