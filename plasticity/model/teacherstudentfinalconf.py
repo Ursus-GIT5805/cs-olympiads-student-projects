@@ -174,7 +174,7 @@ def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
 
 if __name__ == '__main__':
     teacher_epochs = 30
-    student_epochs = 15
+    student_epochs = 10
     student_final_epochs = teacher_epochs*student_epochs
     noise_amount_step = 40000
     batch_size = 250
