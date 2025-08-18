@@ -28,12 +28,14 @@ if __name__ == '__main__':
     teacher_epochs = 50
     student_epochs = 10
     noise_amount_step = 40000
+
+    teacher_batch = 250
     batch_size = 250
 
     key = jax.random.PRNGKey(seed)
 
-    model_teacher = presets.Resnet2_mnist(key)
-    model_student_along = presets.Linear1_mnist(key)
+    model_teacher = presets.Resnet1_mnist(key)
+    model_student_along = presets.Resnet1_mnist(key)
     model_student_along2 = presets.Resnet1_mnist(key)
 
     train_data, test_data = loader.load_mnist_raw()
@@ -47,10 +49,12 @@ if __name__ == '__main__':
     w1 = []
     w2 = []
 
-    lr=0.1
+    lr_teacher = 0.1
 
-    lr2=0.00005
-    wd=0.1
+    lr=0.5
+    lr2=0.0005
+    wd = 0.02
+    epoch_lines = []
 
     fig_kl, ax_kl = plt.subplots()
     ax_kl.set_xlabel("Epochs")
@@ -99,13 +103,17 @@ if __name__ == '__main__':
     for epoch in range(teacher_epochs):
         print("Teacher epochs {}/{}".format(epoch+1, teacher_epochs))
 
+        epoch_lines.append(len(student_epochs_along_divergence))
+        ax_kl.vlines(epoch_lines, 0, 10, color='grey')
+        ax_acc.vlines(epoch_lines, 0, 100, color='grey')
+        ax_w.vlines(epoch_lines, 0, 1000, color='grey')
+
         print("Teacher learning")
         model_teacher.train(
             train_x, train_y,
-            epochs=1, batch_size=batch_size,
-            optimizer=optax.sgd(learning_rate=lr),
-            return_score=False,
-            seed=random.randint(0, int(1e7)),
+            epochs=1, batch_size=teacher_batch,
+            optimizer=optax.sgd(learning_rate=lr_teacher),
+            # seed=random.randint(0, int(1e7)),
         )
 
         accs_teacher.append( model_teacher.accuracy(test_x, test_y) )
@@ -115,37 +123,40 @@ if __name__ == '__main__':
 
         key2 = jax.random.PRNGKey(seed+epoch)
         random_noise_test = jax.random.uniform(key2, shape=(noise_amount_step, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
-        train_student_y = model_teacher.forward(model_teacher.params, random_noise_test)
 
         teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
 
         print("Live student epochs:")
-        for student_epoch in range(student_epochs):
+        for student_epoch, key in enumerate(jax.random.split(key2, student_epochs)):
             print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
+
             opt_state = model_student_along.train(
-                random_noise_test, train_student_y,
+                random_noise_test, teacher_data,
                 epochs=1, batch_size=batch_size,
                 optimizer=optimizer,
                 opt_state=opt_state,
             )
             opt_state2 = model_student_along2.train(
-                random_noise_test, train_student_y,
+                random_noise_test, teacher_data,
                 epochs=1, batch_size=batch_size,
                 optimizer=optimizer2,
                 opt_state=opt_state2,
                 # l2=True,
             )
 
+            noise = jax.random.uniform(key, shape=(noise_amount_step, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
+            noise_label = model_teacher.evaluate(noise)
+
             along_student_acc = model_student_along.accuracy(test_x, test_y)
             along_student_acc2 = model_student_along2.accuracy(test_x, test_y)
             accuracies.append(along_student_acc)
             accuracies2.append(along_student_acc2)
 
-            along_student_data = model_student_along.evaluate(random_noise_test)
-            along_student_data2 = model_student_along2.evaluate(random_noise_test)
+            along_student_data = model_student_along.evaluate(noise)
+            along_student_data2 = model_student_along2.evaluate(noise)
 
-            div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
-            div_stud_along_teacher2 = kl_divergence(q=along_student_data2, p=teacher_data)
+            div_stud_along_teacher = kl_divergence(q=along_student_data, p=noise_label)
+            div_stud_along_teacher2 = kl_divergence(q=along_student_data2, p=noise_label)
 
             student_epochs_along_divergence.append(div_stud_along_teacher)
             student_epochs_along_divergence2.append(div_stud_along_teacher2)
