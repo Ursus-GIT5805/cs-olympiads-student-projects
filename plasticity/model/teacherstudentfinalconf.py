@@ -236,7 +236,7 @@ if __name__ == '__main__':
         # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
         opt_state = model_student_along.train(
             random_noise_step, train_student_y,
-            epochs=student_epochs, batch_size=batch_size,
+            epochs=student_epochs*(epoch+1), batch_size=batch_size,
             optimizer = optimizer,
             l2=False,
             l2_eps=1e-6,
