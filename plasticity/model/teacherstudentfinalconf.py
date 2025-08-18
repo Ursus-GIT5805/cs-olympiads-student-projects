@@ -176,7 +176,7 @@ if __name__ == '__main__':
     teacher_epochs = 30
     student_epochs = 15
     student_final_epochs = teacher_epochs*student_epochs
-    noise_amount_step = 100000
+    noise_amount_step = 4000
     batch_size = 100
 
     key = jax.random.PRNGKey(69420)
@@ -193,7 +193,7 @@ if __name__ == '__main__':
     train_teacher_x, train_teacher_y = train_data
     # train_student_x, _ = train_student
     test_x, test_y = test_data
-    random_noise = jax.random.uniform(key, shape=(noise_amount_step, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
+    random_noise = jax.random.uniform(key, shape=(noise_amount_step * teacher_epochs, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
 
     key2 = jax.random.PRNGKey(69)
     random_noise_test = jax.random.uniform(key2, shape=(40000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
@@ -204,7 +204,7 @@ if __name__ == '__main__':
 
     for epoch in range(teacher_epochs):
         print("Teacher epochs {}/{}".format(epoch+1, teacher_epochs))
-        
+
         print("Teacher learning")
         model_teacher.train(
             train_teacher_x, train_teacher_y,
@@ -219,7 +219,7 @@ if __name__ == '__main__':
         )
         
         # the_key = jax.random.PRNGKey(epoch)
-        random_noise_step = random_noise
+        random_noise_step = random_noise[epoch*noise_amount_step:(epoch+1)*noise_amount_step]
         print(random_noise_step.device)
         train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
 
@@ -236,7 +236,7 @@ if __name__ == '__main__':
         # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
         opt_state = model_student_along.train(
             random_noise_step, train_student_y,
-            epochs=student_epochs*(epoch+1), batch_size=batch_size,
+            epochs=student_epochs, batch_size=batch_size,
             optimizer = optimizer,
             l2=False,
             l2_eps=1e-6,
