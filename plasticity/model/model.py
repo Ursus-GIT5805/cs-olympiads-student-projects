@@ -134,7 +134,7 @@ def _gen_loss_function(
     if l2:
         def loss_fn(params, x, y):
             a = run(params, x)
-            l2_loss = sum(jnp.sum(p**2) for p in jax.tree_util.tree_leaves(params))
+            l2_loss = sum(jnp.sum(abs(p)) for p in jax.tree_util.tree_leaves(params))
             return cost(a, y) + l2_loss*l2_eps
 
     else:
