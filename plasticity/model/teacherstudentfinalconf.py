@@ -181,9 +181,9 @@ if __name__ == '__main__':
 
     key = jax.random.PRNGKey(69420)
     
-    model_teacher = presets.Linear1_mnist(key)
-    model_student_along = presets.Linear1_mnist(key)
-    model_student_final = presets.Linear1_mnist(key)
+    model_teacher = presets.Resnet1_mnist(key)
+    model_student_along = presets.Resnet1_mnist(key)
+    model_student_final = presets.Resnet1_mnist(key)
 
     train_data, test_data = loader.load_mnist_raw()
 
