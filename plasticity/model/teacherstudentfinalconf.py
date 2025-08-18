@@ -177,13 +177,15 @@ if __name__ == '__main__':
     student_epochs = 15
     student_final_epochs = teacher_epochs*student_epochs
     noise_amount_step = 40000
-    batch_size = 250
+    batch_size = 100
 
     key = jax.random.PRNGKey(69420)
     
     model_teacher = presets.Resnet1_mnist(key)
     model_student_along = presets.Resnet1_mnist(key)
     model_student_final = presets.Resnet1_mnist(key)
+    optimizer = optax.sgd(0.1,0.5)
+    opt_state=optimizer.init(model_student_along.params)
 
     train_data, test_data = loader.load_mnist_raw()
 
@@ -229,12 +231,13 @@ if __name__ == '__main__':
         current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
         print(current_student_epochs)
         # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
-        model_student_along.train(
+        opt_state = model_student_along.train(
             random_noise_step, train_student_y,
             epochs=student_epochs, batch_size=batch_size,
-            optimizer = optax.sgd(learning_rate=0.1),
+            optimizer = optimizer,
             l2=False,
-            l2_eps=1e-6
+            l2_eps=1e-6,
+            opt_state=opt_state
             # gamma=0.9,
             # p_slow=0.
             #return_score=True,
