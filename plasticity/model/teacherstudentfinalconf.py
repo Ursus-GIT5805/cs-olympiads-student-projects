@@ -184,7 +184,7 @@ if __name__ == '__main__':
     model_teacher = presets.Resnet1_mnist(key)
     model_student_along = presets.Resnet1_mnist(key)
     model_student_final = presets.Resnet1_mnist(key)
-    optimizer = optax.sgd(0.1,0.5)
+    optimizer = optax.sgd(0.1,0.7)
     opt_state=optimizer.init(model_student_along.params)
 
     train_data, test_data = loader.load_mnist_raw()
