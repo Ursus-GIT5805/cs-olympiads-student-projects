@@ -178,7 +178,7 @@ if __name__ == '__main__':
     student_final_epochs = teacher_epochs*student_epochs
     noise_amount_step = 40000
     batch_size = 250
-
+    batch_size_student = 10
     key = jax.random.PRNGKey(69420)
     
     model_teacher = presets.Resnet1_mnist(key)
@@ -231,7 +231,7 @@ if __name__ == '__main__':
         # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
         model_student_along.train(
             random_noise_step, train_student_y,
-            epochs=student_epochs, batch_size=batch_size,
+            epochs=student_epochs, batch_size=batch_size_student,
             optimizer = optimizer2,
             # gamma=0.9,
             # p_slow=0.
