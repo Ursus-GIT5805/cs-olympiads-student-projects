@@ -18,7 +18,7 @@ def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
     return int(minepoch + (total_student_epochs-minepoch) * 0.5 * (1 - math.cos(math.pi * epoch/(teacher_epochs-1))))
 
 if __name__ == '__main__':
-    teacher_epochs = 90
+    teacher_epochs = 900
     student_epochs = 15
     student_final_epochs = teacher_epochs*student_epochs
     noise_amount_step = 40000
@@ -49,7 +49,10 @@ if __name__ == '__main__':
 
     for epoch in range(teacher_epochs):
         print("Teacher epochs {}/{}".format(epoch+1, teacher_epochs))
-
+        if (epoch % 30) == 0:
+            keyperm = jax.random.key(random.randint(0, int(1e7)))
+            perm = jax.random.permutation(keyperm, random_noise_test.shape[0])
+            random_noise_test = random_noise_test[perm]
         print("Teacher learning")
         model_teacher.train(
             train_teacher_x, train_teacher_y,
