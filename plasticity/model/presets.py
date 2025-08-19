@@ -3,7 +3,7 @@ from model import *
 from linear import linear, feedforward_linear, linears_from_array
 
 def get_dead(a):
-    return jnp.sum(a<1e-6)
+    return jnp.sum(abs(a)<1e-6)
 
 
 
