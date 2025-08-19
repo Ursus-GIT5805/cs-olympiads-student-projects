@@ -56,6 +56,7 @@ def Resnet1_mnist(key):
         a = feedforward_linear(params[3], a)
         a = jax.nn.softmax( a )
         deads+=get_dead(a)
+        return deads
     return Model.init(
         params,
         jax.jit(run),
