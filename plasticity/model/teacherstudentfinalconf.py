@@ -27,8 +27,8 @@ if __name__ == '__main__':
     key = jax.random.PRNGKey(69420)
     
     model_teacher = presets.Resnet1_mnist(key)
-    model_student_along = presets.Resnet4_mnist(key)
-    model_student_final = presets.Resnet4_mnist(key)
+    model_student_along = presets.Resnet1_mnist(key)
+    model_student_final = presets.Resnet1_mnist(key)
     optimizer = optax.sgd(0.1,0.7)
     opt_state=optimizer.init(model_student_along.params)
 
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         print(deads)
         along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
         div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
-        student_epochs_along_divergence.append(div_stud_along_teacher)
+        student_epochs_along_divergence.append(deads)
 
 
     print("After student epochs:")

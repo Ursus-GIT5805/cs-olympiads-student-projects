@@ -3,55 +3,7 @@ from model import *
 from linear import linear, feedforward_linear, linears_from_array
 
 def get_dead(a):
-    return jnp.sum(abs(a)<1e-5)
-
-
-def Resnet4_mnist(key):
-    k1,k2 = jax.random.split(key, 2)
-
-    params = [
-        linear(784, 100, k1),
-        linear(100, 10, k2),
-    ]
-
-    def run(params, a):
-        x = batch_norm(a)
-        x = jax.nn.leaky_relu(x, 0.01)
-        x = feedforward_linear(params[0], x)
-        x = batch_norm(x)
-        x = jax.nn.leaky_relu(x, 0.01)
-        x = feedforward_linear(params[1], x)  # <- use p2 here
-        return a + x
-
-
-    def get_dead_units(params, a):
-        deads = 0
-        a = feedforward_linear(params[0], a)
-        x1 = a.copy()
-        a = jax.nn.sigmoid(a)
-        deads+=get_dead(a)
-        a = feedforward_linear(params[1], a)
-        a = batch_norm(a)
-        a = jax.nn.relu(a)
-        deads+=get_dead(a)
-        a = feedforward_linear(params[2], a)
-        a = batch_norm(a)
-
-        a = a + x1
-        a = jax.nn.relu(a)
-        deads+=get_dead(a)
-        a = feedforward_linear(params[3], a)
-        a = jax.nn.softmax( a )
-        deads+=get_dead(a)
-        return deads
-    return Model.init(
-        params,
-        jax.jit(run),
-        jax.jit(get_dead_units),
-        input_dim=784,
-        output_dim=10,
-    )
-
+    return jnp.sum(abs(a)<1e-4)
 
 
 def Resnet1_mnist(key):
@@ -89,7 +41,7 @@ def Resnet1_mnist(key):
         a = feedforward_linear(params[0], a)
         x1 = a.copy()
         a = jax.nn.sigmoid(a)
-        deads+=get_dead(a)
+        # deads+=get_dead(a)
         a = feedforward_linear(params[1], a)
         a = batch_norm(a)
         a = jax.nn.relu(a)
