@@ -41,7 +41,7 @@ def Resnet1_mnist(key):
         a = feedforward_linear(params[0], a)
         x1 = a.copy()
         a = jax.nn.sigmoid(a)
-        # deads+=get_dead(a)
+        deads+=get_dead(a)
         a = feedforward_linear(params[1], a)
         a = batch_norm(a)
         a = jax.nn.relu(a)

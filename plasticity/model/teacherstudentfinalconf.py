@@ -18,7 +18,7 @@ def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
     return int(minepoch + (total_student_epochs-minepoch) * 0.5 * (1 - math.cos(math.pi * epoch/(teacher_epochs-1))))
 
 if __name__ == '__main__':
-    teacher_epochs = 30
+    teacher_epochs = 100
     student_epochs = 15
     student_final_epochs = teacher_epochs*student_epochs
     noise_amount_step = 40000
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         print(deads)
         along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
         div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
-        student_epochs_along_divergence.append(deads)
+        student_epochs_along_divergence.append(div_stud_along_teacher)
 
 
     print("After student epochs:")
