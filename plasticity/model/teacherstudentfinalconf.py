@@ -18,7 +18,7 @@ def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
     return int(minepoch + (total_student_epochs-minepoch) * 0.5 * (1 - math.cos(math.pi * epoch/(teacher_epochs-1))))
 
 if __name__ == '__main__':
-    teacher_epochs = 50
+    teacher_epochs = 30
     student_epochs = 15
     student_final_epochs = teacher_epochs*student_epochs
     noise_amount_step = 40000
