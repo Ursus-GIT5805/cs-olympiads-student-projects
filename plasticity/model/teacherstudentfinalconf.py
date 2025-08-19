@@ -50,9 +50,10 @@ if __name__ == '__main__':
     for epoch in range(teacher_epochs):
         print("Teacher epochs {}/{}".format(epoch+1, teacher_epochs))
         if (epoch % 30) == 0:
-            keyperm = jax.random.key(random.randint(0, int(1e7)))
-            perm = jax.random.permutation(keyperm, random_noise.shape[0])
-            random_noise = random_noise[perm]
+            # keyperm = jax.random.key(random.randint(0, int(1e7)))
+            # perm = jax.random.permutation(keyperm, random_noise.shape[0])
+            # random_noise = random_noise[perm]
+            pass
         print("Teacher learning")
         model_teacher.train(
             train_teacher_x, train_teacher_y,
