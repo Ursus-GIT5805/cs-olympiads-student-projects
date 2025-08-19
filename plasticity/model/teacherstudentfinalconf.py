@@ -2,6 +2,8 @@ import math
 import jax
 import optax
 
+import numpy as np
+
 import loader
 from linear import *
 from model import Model
@@ -18,14 +20,25 @@ def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
     return int(minepoch + (total_student_epochs-minepoch) * 0.5 * (1 - math.cos(math.pi * epoch/(teacher_epochs-1))))
 
 if __name__ == '__main__':
-    teacher_epochs = 30
+    plt.ion()
+
+    _, ax = plt.subplots()
+    (t_loss,) = ax.plot([], label="Teacher loss")
+    (s_loss,) = ax.plot([], label="LIVE student loss")
+
+    ax.set_xlabel("epochs")
+    ax.set_ylabel("loss")
+
+    ax.legend()
+
+    eras = 20
     student_epochs = 15
-    student_final_epochs = teacher_epochs*student_epochs
+    student_final_epochs = eras*student_epochs
     noise_amount_step = 40000
     batch_size = 100
 
     key = jax.random.PRNGKey(69420)
-    
+
     model_teacher = presets.Resnet1_mnist(key)
     model_student_along = presets.Resnet1_mnist(key)
     model_student_final = presets.Resnet1_mnist(key)
@@ -45,41 +58,31 @@ if __name__ == '__main__':
 
     student_epochs_along_divergence = []
     accuracies = []
+
+    loss = []
+    loss_teacher = []
     # model_student_along.resetsubset()
 
-    for epoch in range(teacher_epochs):
-        print("Teacher epochs {}/{}".format(epoch+1, teacher_epochs))
-        # if (epoch % 30) == 0:
-        #     # keyperm = jax.random.key(random.randint(0, int(1e7)))
-        #     # perm = jax.random.permutation(keyperm, random_noise.shape[0])
-        #     # random_noise = random_noise[perm]
-        #     pass
-        print("Teacher learning")
+    for era in range(eras):
+        print("Teacher epochs {}/{}".format(era+1, eras))
+
         model_teacher.train(
             train_teacher_x, train_teacher_y,
             epochs=1, batch_size=batch_size,
             optimizer=optax.sgd(learning_rate=0.1),
             return_score=False,
-            cost=squaredmean_cost,
-            # evaluate=(test_x, test_y),
             seed=random.randint(0, int(1e7)),
             # gamma=1,
             # p_slow=0
         )
-        
-        # the_key = jax.random.PRNGKey(epoch)
-       
+        l = model_teacher.loss(train_teacher_x, train_teacher_y)
+        loss_teacher.append(l)
 
+        t_loss.set_xdata(np.arange(len(loss_teacher)))
+        t_loss.set_ydata(loss_teacher)
 
         print("Live student epochs:")
-        # for student_epoch in range(student_epochs):
-        # print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
-        # for faketeacherepoch in range(epoch+1):
-        # current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
-        # print(current_student_epochs)
-        # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
-        # for fepoch in range(epoch+1):
-        random_noise_step = random_noise[(epoch % 30)*noise_amount_step:((epoch%30)+1)*noise_amount_step]
+        random_noise_step = random_noise[(era % 30)*noise_amount_step:((era%30)+1)*noise_amount_step]
         print(random_noise_step.device)
         train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
         opt_state = model_student_along.train(
@@ -89,33 +92,35 @@ if __name__ == '__main__':
             l2=False,
             l2_eps=1e-6,
             opt_state=opt_state
-            # gamma=0.9,
-            # p_slow=0.
-            #return_score=True,
-            #evaluate=(test_x, test_y),
         )
-        teacher_data = model_teacher.forward(model_teacher.params, random_noise_step)
-        # model_loss = 
+        l = model_student_along.loss(train_teacher_x, train_teacher_y)
+        loss.append(l)
+
+        s_loss.set_xdata(np.arange(len(loss)))
+        s_loss.set_ydata(loss)
+
+        teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
+
         along_student_acc = model_student_along.accuracy(test_x, test_y)
         accuracies.append(along_student_acc/100)
-        deads = model_student_along.deads(model_student_along.params,random_noise_step)
+        deads = model_student_along.deads(model_student_along.params,random_noise_test)
         print(deads)
-        along_student_data = model_student_along.forward(model_student_along.params, random_noise_step)
+        along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
         div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
         student_epochs_along_divergence.append(div_stud_along_teacher)
 
+        ax.relim()
+        ax.autoscale_view()
+
+        plt.draw()
+        plt.pause(0.01)
+
+
+    plt.ioff()
+    plt.show()
 
     print("After student epochs:")
 
-#    train_student_y_final = model_teacher.forward(model_teacher.params, random_noise)
-#    model_student_final.train(
-#        random_noise, train_student_y_final,
-#        epochs=student_final_epochs, batch_size=batch_size,
-#        optimizer = optax.sgd(learning_rate=0.1),
-#        return_score=False,
-#        # evaluate=(test_x, test_y),
-#    )
-#
     acc_train = model_teacher.accuracy(train_teacher_x, train_teacher_y)
     acc_test = model_teacher.accuracy(test_x, test_y)
     print("Accuracy teacher on training data: {}%".format(acc_train))
@@ -126,21 +131,8 @@ if __name__ == '__main__':
     print("Accuracy live student on training data: {}%".format(acc_train))
     print("Accuracy live student on test data: {}%".format(acc_test))
     print([float(x) for x in student_epochs_along_divergence])
-#
-#    acc_train = model_student_final.accuracy(train_x, train_y)
-#    acc_test = model_student_final.accuracy(test_x, test_y)
-#    print("Accuracy after student on training data: {}%".format(acc_train))
-#    print("Accuracy after student on test data: {}%".format(acc_test))
-#
-#
-#    teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
-#    along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
-#    final_student_data = model_student_final.forward(model_student_final.params, random_noise_test)
-#
-#    div_stud_follow_teacher = kl_divergence(q=along_student_data, p=teacher_data)
-#    div_stud_final_teacher = kl_divergence(q=final_student_data, p=teacher_data)
-#
-#    print("Divergence of live student to teacher: {}".format(div_stud_follow_teacher))
-#    print("Divergence of after student to teacher: {}".format(div_stud_final_teacher))
 
-    # plt.plot(student_epochs_along_divergence, label='divergence')
+    plt.plot(loss, label="along student")
+    plt.plot(loss_teacher, label="teacher")
+
+    plt.show()
