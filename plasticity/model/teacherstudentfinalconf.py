@@ -71,6 +71,7 @@ if __name__ == '__main__':
         # student_epochs_along_divergence.append(teacher_loss)
         # the_key = jax.random.PRNGKey(epoch)
         along_student_acc = model_teacher.accuracy(test_x, test_y)
+        print(along_student_acc)
         accuracies.append(along_student_acc/100)
 
 
