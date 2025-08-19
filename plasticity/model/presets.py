@@ -17,24 +17,14 @@ def Resnet4_mnist(key):
     ]
 
     def run(params, a):
-        a = feedforward_linear(params[0], a)
+        x = batch_norm(a)
+        x = jax.nn.leaky_relu(x, 0.01)
+        x = feedforward_linear(params[0], x)
+        x = batch_norm(x)
+        x = jax.nn.leaky_relu(x, 0.01)
+        x = feedforward_linear(params[1], x)  # <- use p2 here
+        return a + x
 
-        x1 = a.copy()
-
-        a = jax.nn.sigmoid(a)
-        a = feedforward_linear(params[1], a)
-        a = batch_norm(a)
-        a = jax.nn.leaky_relu(a,0.01)
-
-        a = feedforward_linear(params[2], a)
-        a = batch_norm(a)
-
-        a = a + x1
-        a = jax.nn.leaky_relu(a,0.01)
-
-        a = feedforward_linear(params[3], a)
-        a = jax.nn.softmax( a )
-        return a
 
     def get_dead_units(params, a):
         deads = 0
