@@ -52,7 +52,7 @@ if __name__ == '__main__':
         if (epoch % 30) == 0:
             keyperm = jax.random.key(random.randint(0, int(1e7)))
             perm = jax.random.permutation(keyperm, random_noise.shape[0])
-            random_noise = random_noise[perm]
+            # random_noise = random_noise[perm]
         print("Teacher learning")
         model_teacher.train(
             train_teacher_x, train_teacher_y,
