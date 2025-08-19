@@ -29,7 +29,7 @@ if __name__ == '__main__':
     model_teacher = presets.Resnet1_mnist(key)
     model_student_along = presets.Resnet1_mnist(key)
     model_student_final = presets.Resnet1_mnist(key)
-    optimizer = optax.sgd(0.1,0.7)
+    optimizer = optax.sgd(0.1)
     opt_state=optimizer.init(model_student_along.params)
 
     train_data, test_data = loader.load_mnist_raw()
@@ -84,7 +84,7 @@ if __name__ == '__main__':
             random_noise_step, train_student_y,
             epochs=student_epochs, batch_size=batch_size,
             optimizer = optimizer,
-            l2=True,
+            l2=False,
             l2_eps=1e-6,
             opt_state=opt_state
             # gamma=0.9,
