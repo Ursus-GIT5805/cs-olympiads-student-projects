@@ -18,7 +18,7 @@ def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
     return int(minepoch + (total_student_epochs-minepoch) * 0.5 * (1 - math.cos(math.pi * epoch/(teacher_epochs-1))))
 
 if __name__ == '__main__':
-    teacher_epochs = 30
+    teacher_epochs = 90
     student_epochs = 15
     student_final_epochs = teacher_epochs*student_epochs
     noise_amount_step = 40000
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     train_teacher_x, train_teacher_y = train_data
     # train_student_x, _ = train_student
     test_x, test_y = test_data
-    random_noise = jax.random.uniform(key, shape=(noise_amount_step * teacher_epochs, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
+    random_noise = jax.random.uniform(key, shape=(noise_amount_step * 30, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
 
     key2 = jax.random.PRNGKey(69)
     random_noise_test = jax.random.uniform(key2, shape=(40000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
@@ -74,7 +74,7 @@ if __name__ == '__main__':
         # current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
         # print(current_student_epochs)
         # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
-        random_noise_step = random_noise[epoch*noise_amount_step:(epoch+1)*noise_amount_step]
+        random_noise_step = random_noise[(epoch % 30)*noise_amount_step:((epoch%30)+1)*noise_amount_step]
         print(random_noise_step.device)
         train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
         opt_state = model_student_along.train(
