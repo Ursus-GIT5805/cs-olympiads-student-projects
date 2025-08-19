@@ -66,9 +66,11 @@ if __name__ == '__main__':
             # gamma=1,
             # p_slow=0
         )
-        
+
+        teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
+        teacher_loss = model_teacher.loss(random_noise_test,teacher_data,squaredmean_cost)
         # the_key = jax.random.PRNGKey(epoch)
-       
+        student_epochs_along_divergence.append(teacher_loss)
 
 
         print("Live student epochs:")
@@ -78,30 +80,30 @@ if __name__ == '__main__':
         # current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
         # print(current_student_epochs)
         # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
-        random_noise_step = random_noise[(epoch % 30)*noise_amount_step:((epoch%30)+1)*noise_amount_step]
-        print(random_noise_step.device)
-        train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
-        opt_state = model_student_along.train(
-            random_noise_step, train_student_y,
-            epochs=student_epochs, batch_size=batch_size,
-            optimizer = optimizer,
-            l2=False,
-            l2_eps=1e-6,
-            opt_state=opt_state
-            # gamma=0.9,
-            # p_slow=0.
-            #return_score=True,
-            #evaluate=(test_x, test_y),
-        )
-        teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
+        # random_noise_step = random_noise[(epoch % 30)*noise_amount_step:((epoch%30)+1)*noise_amount_step]
+        # print(random_noise_step.device)
+        # train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
+        # opt_state = model_student_along.train(
+        #     random_noise_step, train_student_y,
+        #     epochs=student_epochs, batch_size=batch_size,
+        #     optimizer = optimizer,
+        #     l2=False,
+        #     l2_eps=1e-6,
+        #     opt_state=opt_state
+        #     # gamma=0.9,
+        #     # p_slow=0.
+        #     #return_score=True,
+        #     #evaluate=(test_x, test_y),
+        # )
+        # teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
 
-        along_student_acc = model_student_along.accuracy(test_x, test_y)
-        accuracies.append(along_student_acc/100)
-        deads = model_student_along.deads(model_student_along.params,random_noise_test)
-        print(deads)
-        along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
-        div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
-        student_epochs_along_divergence.append(div_stud_along_teacher)
+        # along_student_acc = model_student_along.accuracy(test_x, test_y)
+        # accuracies.append(along_student_acc/100)
+        # deads = model_student_along.deads(model_student_along.params,random_noise_test)
+        # print(deads)
+        # along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
+        # div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
+        # student_epochs_along_divergence.append(div_stud_along_teacher)
 
 
     print("After student epochs:")
