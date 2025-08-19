@@ -66,11 +66,12 @@ if __name__ == '__main__':
             # gamma=1,
             # p_slow=0
         )
-        teacher_loss = model_teacher.loss(train_teacher_x,train_teacher_y,squaredmean_cost)
-        print(teacher_loss)
-        student_epochs_along_divergence.append(teacher_loss)
+        # teacher_loss = model_teacher.loss(train_teacher_x,train_teacher_y,squaredmean_cost)
+        # print(teacher_loss)
+        # student_epochs_along_divergence.append(teacher_loss)
         # the_key = jax.random.PRNGKey(epoch)
-       
+        along_student_acc = model_teacher.accuracy(test_x, test_y)
+        accuracies.append(along_student_acc/100)
 
 
         print("Live student epochs:")
@@ -126,8 +127,8 @@ if __name__ == '__main__':
     acc_test = model_student_along.accuracy(test_x, test_y)
     print("Accuracy live student on training data: {}%".format(acc_train))
     print("Accuracy live student on test data: {}%".format(acc_test))
-    print([float(x) for x in student_epochs_along_divergence])
-#
+    print([float(x) for x in accuracies])
+#   
 #    acc_train = model_student_final.accuracy(train_x, train_y)
 #    acc_test = model_student_final.accuracy(test_x, test_y)
 #    print("Accuracy after student on training data: {}%".format(acc_train))
