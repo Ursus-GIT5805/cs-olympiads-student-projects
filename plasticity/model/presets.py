@@ -7,13 +7,11 @@ def get_dead(a):
 
 
 def Resnet4_mnist(key):
-    k1,k2,k3,k4 = jax.random.split(key, 4)
+    k1,k2 = jax.random.split(key, 2)
 
     params = [
         linear(784, 100, k1),
-        linear(100, 100, k2),
-        linear(100, 100, k3),
-        linear(100, 10, k4),
+        linear(100, 10, k2),
     ]
 
     def run(params, a):
