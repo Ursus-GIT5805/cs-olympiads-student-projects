@@ -46,6 +46,7 @@ def _threshold_for_top_p(abs_all, p):
     k = int(math.floor(p * total))
     if k <= 0 or total == 0:
         return None  # no-op
+
     # threshold = kth largest value
     # sort is simplest; for very large arrays you can use jnp.partition
     sorted_vals = jnp.sort(abs_all)
@@ -200,13 +201,6 @@ class Model:
                 "Output most be of shape {}, not {}"
                 .format(n, self.output_dim, y.shape)
             )
-    # def resetsubset(self):
-    #     newparams=[]
-    #     for param in self.params:
-    #         newparamweights=0
-    #         for w1 in param[0]:
-    #             for w2 in w1:
-    #                 if(random.random()<0.2):
 
     def model_reset_top(self, p=0.2, seed=0):
         """
@@ -232,7 +226,6 @@ class Model:
         l2=False,
         l2_eps=1e-4,
         eval_fn=None,
-        wtf=False
     ):
         n = train_x.shape[0]
 
@@ -249,8 +242,8 @@ class Model:
 
         scores = []
         loss_fn = _gen_loss_function(self.forward, cost, l2=l2, l2_eps=l2_eps)
-        if not eval_fn:
-            eval_fn = cost
+
+        if not eval_fn: eval_fn = cost
         eval_fn = _gen_loss_function(self.forward, eval_fn, l2=l2, l2_eps=l2_eps)
 
         if evaluate:
@@ -258,8 +251,7 @@ class Model:
             self.assert_data_shape(tx, ty)
 
         for epoch in range(epochs):
-            if verbose:
-                print("Epoch {}/{}".format(epoch+1, epochs))
+            if verbose: print("Epoch {}/{}".format(epoch+1, epochs))
 
             key = jax.random.PRNGKey(seed)
             train_x = jax.random.permutation(key, train_x, axis=0)
@@ -276,16 +268,15 @@ class Model:
                 batch_size=batch_size
             )
 
-            if return_score and not wtf:
+            if return_score and not evaluate:
                 scores.append(jnp.mean(loss))
 
-            if evaluate and wtf:
+            if evaluate:
                 loss, _ = jax.value_and_grad(eval_fn)(self.params, tx, ty)
                 scores.append(loss)
                 # print(loss)
-                print("Loss: {}".format(loss))
+                if verbose: print("Loss: {}".format(loss))
 
-        print(len(scores))
         if return_score:
             return scores, opt_state
 
@@ -293,8 +284,7 @@ class Model:
 
     def loss(
         self,
-        tx,
-        ty,
+        tx, ty,
         cost=crossentropy_cost,
     ):
         loss_fn = _gen_loss_function(self.forward, cost)
