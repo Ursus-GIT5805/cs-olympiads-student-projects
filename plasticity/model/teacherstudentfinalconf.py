@@ -67,8 +67,8 @@ if __name__ == '__main__':
             # p_slow=0
         )
 
-        teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
-        teacher_loss = model_teacher.loss(random_noise_test,teacher_data,squaredmean_cost)
+        # teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
+        teacher_loss = model_teacher.loss(train_teacher_x,train_teacher_y,squaredmean_cost)
         # the_key = jax.random.PRNGKey(epoch)
         print(f"Loss : {teacher_loss}")
         student_epochs_along_divergence.append(teacher_loss)
