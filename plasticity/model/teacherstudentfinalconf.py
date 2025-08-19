@@ -29,7 +29,7 @@ if __name__ == '__main__':
     model_teacher = presets.Resnet1_mnist(key)
     model_student_along = presets.Resnet1_mnist(key)
     model_student_final = presets.Resnet1_mnist(key)
-    optimizer = optax.sgd(0.1)
+    optimizer = optax.sgd(0.1,0.7)
     opt_state=optimizer.init(model_student_along.params)
 
     train_data, test_data = loader.load_mnist_raw()
@@ -51,8 +51,8 @@ if __name__ == '__main__':
         print("Teacher epochs {}/{}".format(epoch+1, teacher_epochs))
         if (epoch % 30) == 0:
             keyperm = jax.random.key(random.randint(0, int(1e7)))
-            perm = jax.random.permutation(keyperm, random_noise_test.shape[0])
-            random_noise_test = random_noise_test[perm]
+            perm = jax.random.permutation(keyperm, random_noise.shape[0])
+            random_noise = random_noise[perm]
         print("Teacher learning")
         model_teacher.train(
             train_teacher_x, train_teacher_y,
