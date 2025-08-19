@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
         along_student_acc = model_student_along.accuracy(test_x, test_y)
         accuracies.append(along_student_acc/100)
-        deads = model_student_along.deads()
+        deads = model_student_along.deads(model_student_along.params,random_noise_test)
         print(deads)
         along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
         div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
