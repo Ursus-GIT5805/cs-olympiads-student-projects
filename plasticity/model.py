@@ -6,6 +6,7 @@ import dill as pickle
 import math
 from dataclasses import dataclass
 from functools import partial
+import sys
 
 @jax.jit
 def batch_norm(x):
@@ -118,11 +119,6 @@ def crossentropy_cost(a, y):
 def squaredmean_cost(a, y):
     return jnp.mean( (a-y) ** 2 )
 
-@jax.jit
-def crossentropy_cost(a, y):
-    eps = 0.001
-    return jnp.mean(-y * jnp.log(a+eps) - (1-y) * jnp.log1p(-a+eps))
-
 
 # ===== Training =====
 
@@ -146,7 +142,9 @@ def _gen_loss_function(
     return jax.jit(loss_fn)
 
 @partial(jax.jit, static_argnames=('optimizer', 'loss_fn', 'batches', 'batch_size'))
-def train_epoch(params, opt_state, x, y, optimizer, loss_fn, batches, batch_size):
+def train_epoch(params, opt_state, x, y, optimizer, loss_fn, batches, batch_size, key):
+    x = jax.random.permutation(key, x, axis=0)
+    y = jax.random.permutation(key, y, axis=0)
 
     def step(carry, batch_idx):
         params, opt_state = carry
@@ -220,13 +218,17 @@ class Model:
         return_score=False, # Returns a list of losses per batch
         opt_state=None,
         evaluate=None, # Prints a list of losses corresponding to the given test data
-        seed=42,
+        key = None,
         batches=None,
         verbose=True,
         l2=False,
         l2_eps=1e-4,
         eval_fn=None,
     ):
+        if key == None:
+            print("PASS A KEY TO MODEL.TRAIN")
+            sys.exit(1)
+
         n = train_x.shape[0]
 
         if opt_state == None:
@@ -253,9 +255,7 @@ class Model:
         for epoch in range(epochs):
             if verbose: print("Epoch {}/{}".format(epoch+1, epochs))
 
-            key = jax.random.PRNGKey(seed)
-            train_x = jax.random.permutation(key, train_x, axis=0)
-            train_y = jax.random.permutation(key, train_y, axis=0)
+            key, key_temp = jax.random.split(key)
 
             self.params, opt_state, loss = train_epoch(
                 params=self.params,
@@ -265,7 +265,8 @@ class Model:
                 optimizer=optimizer,
                 loss_fn=loss_fn,
                 batches=batches,
-                batch_size=batch_size
+                batch_size=batch_size,
+                key=key_temp
             )
 
             if return_score and not evaluate:
