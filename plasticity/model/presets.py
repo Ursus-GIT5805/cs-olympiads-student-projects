@@ -3,10 +3,8 @@ from model import *
 from linear import linear, feedforward_linear, linears_from_array
 
 def get_dead(a):
-    sol = 0
-    for n in a:
-        sol+=n<0.0001
-    return sol
+    return jnp.sum(a<0.0001)
+
 
 
 def Resnet1_mnist(key):
