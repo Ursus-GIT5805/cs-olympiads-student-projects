@@ -171,11 +171,13 @@ class Model:
     output_dim: int
     params: object
     forward: object
+    deads: object
 
     @staticmethod
     def init(
         params,
         forward,
+        deads=None,
         input_dim=None,
         output_dim=None,
     ):
@@ -184,6 +186,7 @@ class Model:
             output_dim=output_dim,
             params=params,
             forward=forward,
+            deads=deads
         )
 
     def assert_data_shape(self, x, y):
