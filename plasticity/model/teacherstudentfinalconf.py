@@ -18,8 +18,8 @@ def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
     return int(minepoch + (total_student_epochs-minepoch) * 0.5 * (1 - math.cos(math.pi * epoch/(teacher_epochs-1))))
 
 if __name__ == '__main__':
-    teacher_epochs = 300
-    student_epochs = 15
+    teacher_epochs = 30
+    student_epochs = 80
     student_final_epochs = teacher_epochs*student_epochs
     noise_amount_step = 40000
     batch_size = 100
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     model_teacher = presets.Resnet1_mnist(key)
     model_student_along = presets.Resnet1_mnist(key)
     model_student_final = presets.Resnet1_mnist(key)
-    optimizer = optax.adamw(learning_rate=0.0001,weight_decay=0.1)
+    optimizer = optax.sgd(learning_rate=0.1)
     opt_state=optimizer.init(model_student_along.params)
 
     train_data, test_data = loader.load_mnist_raw()
@@ -49,11 +49,11 @@ if __name__ == '__main__':
 
     for epoch in range(teacher_epochs):
         print("Teacher epochs {}/{}".format(epoch+1, teacher_epochs))
-        if (epoch % 30) == 0:
-            # keyperm = jax.random.key(random.randint(0, int(1e7)))
-            # perm = jax.random.permutation(keyperm, random_noise.shape[0])
-            # random_noise = random_noise[perm]
-            pass
+        # if (epoch % 30) == 0:
+        #     # keyperm = jax.random.key(random.randint(0, int(1e7)))
+        #     # perm = jax.random.permutation(keyperm, random_noise.shape[0])
+        #     # random_noise = random_noise[perm]
+        #     pass
         print("Teacher learning")
         model_teacher.train(
             train_teacher_x, train_teacher_y,
@@ -78,6 +78,7 @@ if __name__ == '__main__':
         # current_student_epochs = getepochsforstudent(epoch,teacher_epochs,student_epochs,5)
         # print(current_student_epochs)
         # model_student_along.model_reset_top(p=0.0001, seed=random.randint(0, int(1e7)))
+        # for fepoch in range(epoch+1):
         random_noise_step = random_noise[(epoch % 30)*noise_amount_step:((epoch%30)+1)*noise_amount_step]
         print(random_noise_step.device)
         train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
@@ -94,7 +95,7 @@ if __name__ == '__main__':
             #evaluate=(test_x, test_y),
         )
         teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
-
+        # model_loss = 
         along_student_acc = model_student_along.accuracy(test_x, test_y)
         accuracies.append(along_student_acc/100)
         deads = model_student_along.deads(model_student_along.params,random_noise_test)
