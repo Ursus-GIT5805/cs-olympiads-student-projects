@@ -171,13 +171,11 @@ class Model:
     output_dim: int
     params: object
     forward: object
-    deads: object
 
     @staticmethod
     def init(
         params,
         forward,
-        deads=None,
         input_dim=None,
         output_dim=None,
     ):
@@ -186,7 +184,6 @@ class Model:
             output_dim=output_dim,
             params=params,
             forward=forward,
-            deads=deads
         )
 
     def assert_data_shape(self, x, y):
@@ -210,7 +207,7 @@ class Model:
     #         for w1 in param[0]:
     #             for w2 in w1:
     #                 if(random.random()<0.2):
-    
+
     def model_reset_top(self, p=0.2, seed=0):
         """
         Reset top-|value| p fraction of weights and biases (separately).
@@ -330,4 +327,3 @@ class Model:
     def load(path):
         with open(path, "rb") as f:
             return pickle.load(f)
-
