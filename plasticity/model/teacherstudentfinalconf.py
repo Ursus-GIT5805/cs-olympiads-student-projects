@@ -18,7 +18,7 @@ def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
     return int(minepoch + (total_student_epochs-minepoch) * 0.5 * (1 - math.cos(math.pi * epoch/(teacher_epochs-1))))
 
 if __name__ == '__main__':
-    teacher_epochs = 900
+    teacher_epochs = 300
     student_epochs = 15
     student_final_epochs = teacher_epochs*student_epochs
     noise_amount_step = 40000
@@ -84,7 +84,7 @@ if __name__ == '__main__':
             random_noise_step, train_student_y,
             epochs=student_epochs, batch_size=batch_size,
             optimizer = optimizer,
-            l2=False,
+            l2=True,
             l2_eps=1e-6,
             opt_state=opt_state
             # gamma=0.9,
