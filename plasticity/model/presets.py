@@ -6,10 +6,10 @@ def Resnet1_mnist(key):
     k1,k2,k3,k4 = jax.random.split(key, 4)
 
     params = [
-        linear(784, 100, k1),
-        linear(100, 100, k2),
-        linear(100, 100, k3),
-        linear(100, 10, k4),
+        linear(784, 300, k1),
+        linear(300, 300, k2),
+        linear(300, 300, k3),
+        linear(300, 10, k4),
     ]
 
     def run(params, a):
