@@ -122,7 +122,7 @@ def squaredmean_cost(a, y):
 
 # ===== Training =====
 
-def _gen_loss_function(
+def gen_loss_function(
         run,
         cost,
         l2=False,
@@ -224,6 +224,7 @@ class Model:
         l2=False,
         l2_eps=1e-4,
         eval_fn=None,
+        loss_fn=None,
     ):
         if key == None:
             print("PASS A KEY TO MODEL.TRAIN")
@@ -243,10 +244,12 @@ class Model:
             batch_size = train_x.shape[0] // batches
 
         scores = []
-        loss_fn = _gen_loss_function(self.forward, cost, l2=l2, l2_eps=l2_eps)
+
+        if loss_fn == None:
+            loss_fn = gen_loss_function(self.forward, cost, l2=l2, l2_eps=l2_eps)
 
         if not eval_fn: eval_fn = cost
-        eval_fn = _gen_loss_function(self.forward, eval_fn, l2=l2, l2_eps=l2_eps)
+        eval_fn = gen_loss_function(self.forward, eval_fn, l2=l2, l2_eps=l2_eps)
 
         if evaluate:
             tx, ty = evaluate
@@ -288,7 +291,7 @@ class Model:
         tx, ty,
         cost=crossentropy_cost,
     ):
-        loss_fn = _gen_loss_function(self.forward, cost)
+        loss_fn = gen_loss_function(self.forward, cost)
         loss, _ = jax.value_and_grad(loss_fn)(self.params, tx, ty)
         return loss
 
