@@ -26,7 +26,7 @@ if __name__ == '__main__':
     test_x, test_y = test_data
 
     # set up teacher
-    teacher_eras = 100
+    teacher_eras = 500
     teacher_lr = 0.0005
     teacher_wd = 0.0001
     teacher_bs = 125
@@ -39,6 +39,7 @@ if __name__ == '__main__':
     plt.ion()
     fig, ax_accuracy = plt.subplots()
     fig, ax_kldiv = plt.subplots()
+    fig, ax_kldiv_mnisttest = plt.subplots()
 
     line_acc_teach, = ax_accuracy.plot([], label="Teacher (adamw, lr=5e-4; wd=1e-4)")
     line_acc_student_live, = ax_accuracy.plot([], label="Live Student (adamw, lr=5e-5; wd=1e-6)")
@@ -49,20 +50,27 @@ if __name__ == '__main__':
     ax_kldiv.set_xlabel("Epoch")
     ax_kldiv.set_ylabel("KL divergence")
 
+    line_kl_student_mnist_live, = ax_kldiv_mnisttest.plot([], label="Live Student (adamw, lr=5e-5; wd=1e-6)")
+    ax_kldiv_mnisttest.set_xlabel("Epoch")
+    ax_kldiv_mnisttest.set_ylabel("KL divergence")
+
     ax_accuracy.legend()
     ax_kldiv.legend()
+    ax_kldiv_mnisttest.legend()
 
     ax_accuracy.grid()
     ax_kldiv.grid()
+    ax_kldiv_mnisttest.grid()
 
     ax_accuracy.set_title("Accuracies on test data")
-    ax_kldiv.set_title("KL(Teacher||Student)")
+    ax_kldiv.set_title("KL(Teacher||Student) Random noise")
+    ax_kldiv_mnisttest.set_title("KL(Teacher||Student) MNIST")
 
     #set up students
     model_student_live = presets.Resnet1_mnist(models_seeds)
     model_student_final = presets.Resnet1_mnist(models_seeds)
 
-    student_epochs = 15
+    student_epochs = 5
     bright_student_epochs = teacher_eras * student_epochs
     batch_size_student = 100
 
@@ -86,6 +94,9 @@ if __name__ == '__main__':
     student_kl_div_epoch = []
     student_kl_div = []
 
+    student_kl_div_epoch_mnist = []
+    student_kl_div_mnist = []
+
     for era in range(teacher_eras):
         print("Era: {}/{}".format(era+1, teacher_eras))
         key, teacher_train_key = jax.random.split(key)
@@ -106,8 +117,7 @@ if __name__ == '__main__':
         teacher_acc_epoch.append(era * student_epochs)
 
         test_noise_y_teach = model_teacher.evaluate(test_noise)
-
-
+        mnist_y_teach = model_teacher.evaluate(test_x)
 
         for epoch in range(student_epochs):
             print("Epoch: {}/{}".format(epoch+1, student_epochs))
@@ -138,6 +148,11 @@ if __name__ == '__main__':
             student_kl_div_epoch.append(era * student_epochs + epoch)
             student_kl_div.append(kl_div)
 
+            test_mnist_y_student = model_student_live.evaluate(test_x)
+            kl_div_mnist = kl_divergence(p=mnist_y_teach, q=test_mnist_y_student)
+            student_kl_div_epoch_mnist.append(era*student_epochs + epoch)
+            student_kl_div_mnist.append(kl_div_mnist)
+
             line_acc_teach.set_xdata(teacher_acc_epoch)
             line_acc_teach.set_ydata(teacher_acc)
             line_acc_student_live.set_xdata(student_acc_epoch)
@@ -146,11 +161,17 @@ if __name__ == '__main__':
             line_kl_student_live.set_xdata(student_kl_div_epoch)
             line_kl_student_live.set_ydata(student_kl_div)
 
+            line_kl_student_mnist_live.set_xdata(student_kl_div_epoch_mnist)
+            line_kl_student_mnist_live.set_ydata(student_kl_div_mnist)
+
             ax_accuracy.relim()
             ax_accuracy.autoscale_view()
 
             ax_kldiv.relim()
             ax_kldiv.autoscale_view()
+
+            ax_kldiv_mnisttest.relim()
+            ax_kldiv_mnisttest.autoscale_view()
 
             plt.draw()
             plt.pause(0.01)
