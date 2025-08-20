@@ -71,7 +71,7 @@ if __name__ == '__main__':
             epochs=1, batch_size=batch_size,
             optimizer=optax.sgd(learning_rate=0.1),
             return_score=False,
-            seed=random.randint(0, int(1e7)),
+            key=jax.random.PRNGKey(random.randint(0, int(1e7))),
             # gamma=1,
             # p_slow=0
         )
@@ -92,8 +92,9 @@ if __name__ == '__main__':
                 optimizer = optimizer,
                 l2=False,
                 l2_eps=1e-6,
-                opt_state=opt_state
-            )
+                opt_state=opt_state,
+                key=jax.random.PRNGKey(random.randint(0, int(1e7))
+            ))
         l = model_student_along.loss(train_teacher_x, train_teacher_y)
         loss.append(l)
 
