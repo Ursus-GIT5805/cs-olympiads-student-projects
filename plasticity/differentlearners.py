@@ -66,13 +66,13 @@ if __name__ == '__main__':
     optimizers = []
     labels = []
 
-    for lr, mom in [(0.1, None)]:
+    for lr, mom in [(0.1, None), (0.2, 0.8)]:
         optimizers.append( optax.sgd(learning_rate=lr, momentum=mom) )
         labels.append(f"sgd (lr={lr}, momentum={mom})")
 
-    # for lr, wd in [(lr_teacher, wd_teacher), (0.001, 0.005), (0.0001, 5e-7)]:
-        # optimizers.append( optax.adamw(learning_rate=lr, weight_decay=wd) )
-        # labels.append(f"adamw (lr={lr}, wd={wd})")
+    for lr, wd in [(0.0001, 0.1), (0.0001, 0.0005)]:
+        optimizers.append( optax.adamw(learning_rate=lr, weight_decay=wd) )
+        labels.append(f"adamw (lr={lr}, wd={wd})")
 
     # for lr in [0.2, 0.3, 0.5]:
         # optimizers.append( optax.adam(learning_rate=lr) )
@@ -127,7 +127,7 @@ if __name__ == '__main__':
         plots["w"].append("teacher", mean_weights(model_teacher.params), x=x_pos)
 
         teacher_label = model_teacher.evaluate(train_x)
-        teacher_test_out = model_teacher.evaluate(test_x)
+        # teacher_test_out = model_teacher.evaluate(test_x)
 
         # Student epochs
         for student_epoch, key in enumerate(jax.random.split(key2, student_epochs)):
@@ -158,15 +158,13 @@ if __name__ == '__main__':
                 )
 
                 noise_out = model.evaluate(noise)
-                test_out = model.evaluate(test_x)
+                # test_out = model.evaluate(test_x)
 
-                kl_o = f"{name} on test data"
-                kl_r = f"{name} on noise"
+                # kl_o = f"{name} on test data"
+                # kl_r = f"{name}"
 
-                plots["kl"].append(kl_o, kl_divergence(q=test_out, p=teacher_test_out))
-                plots["kl"].append(kl_r, kl_divergence(q=noise_out, p=teacher_noise_out))
-
-
+                # plots["kl"].append(kl_o, kl_divergence(q=test_out, p=teacher_test_out))
+                plots["kl"].append(name, kl_divergence(q=noise_out, p=teacher_noise_out))
                 plots["acc"].append(name, model.accuracy(test_x, test_y))
                 plots["w"].append(name, mean_weights(model.params))
 
