@@ -3,9 +3,10 @@ import matplotlib.pyplot as plt
 
 
 if __name__ == '__main__':
-    a = jnp.load('sgd.npy')
-    b = jnp.load('adamw.npy')
-
+    # a = jnp.load('sgd.npy')
+    # b = jnp.load('adamw.npy')
+    a = []
+    b = []
     plt.plot(a, label='sgd lr=0.1')
     plt.plot(b, label='adamw lr=5e-5, w=0.1')
     plt.legend()
