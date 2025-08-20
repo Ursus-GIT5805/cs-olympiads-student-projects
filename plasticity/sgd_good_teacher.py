@@ -26,12 +26,12 @@ if __name__ == '__main__':
     test_x, test_y = test_data
 
     # set up teacher
-    teacher_eras = 30
+    teacher_eras = 100
     teacher_lr = 0.0005
     teacher_wd = 0.0001
     teacher_bs = 125
     model_teacher = presets.Resnet1_mnist(models_seeds)
-    optimizer_teacher = optax.adamw(learning_rate=0.0005, weight_decay=0.0001)
+    optimizer_teacher = optax.adamw(learning_rate=teacher_lr, weight_decay=teacher_wd)
     optimizer_teacher_state = optimizer_teacher.init(model_teacher.params)
     loss_fn_teacher = _gen_loss_function(model_teacher.forward, crossentropy_cost)
 
@@ -40,12 +40,12 @@ if __name__ == '__main__':
     fig, ax_accuracy = plt.subplots()
     fig, ax_kldiv = plt.subplots()
 
-    line_acc_teach, = ax_accuracy.plot([], label="Teacher")
-    line_acc_student_live, = ax_accuracy.plot([], label="Live Student")
+    line_acc_teach, = ax_accuracy.plot([], label="Teacher (adamw, lr=5e-4; wd=1e-4)")
+    line_acc_student_live, = ax_accuracy.plot([], label="Live Student (sgd, lr=0.2; mom=0.8)")
     ax_accuracy.set_xlabel("Epoch")
     ax_accuracy.set_ylabel("Accuracy")
 
-    line_kl_student_live, = ax_kldiv.plot([], label="Live Student (sgd, lr = 0.2, momentum = 0.8)")
+    line_kl_student_live, = ax_kldiv.plot([], label="Live Student (sgd, lr=0.2; wd=0.8)")
     ax_kldiv.set_xlabel("Epoch")
     ax_kldiv.set_ylabel("KL divergence")
 
@@ -107,9 +107,13 @@ if __name__ == '__main__':
 
         test_noise_y_teach = model_teacher.evaluate(test_noise)
 
+
+
         for epoch in range(student_epochs):
             print("Epoch: {}/{}".format(epoch+1, student_epochs))
+
             key, noise_key = jax.random.split(key)
+
             train_noise = jax.random.uniform(noise_key, (train_noise_amount, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
             train_noise_y = model_teacher.evaluate(train_noise)
 
