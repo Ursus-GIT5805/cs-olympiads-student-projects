@@ -71,8 +71,6 @@ if __name__ == '__main__':
             for bs in batch_size:
                 to_try.append([models_seeds, crossentropy_cost, lr, wd, bs])
 
-    
-
     ctx = get_context('spawn')
     results = []
 

@@ -40,7 +40,7 @@ if __name__ == '__main__':
     print("Seed:", seed)
 
     # --- Constants ---
-    eras = 20
+    eras = 100
     student_epochs = 10
     noise_amount_step = 40000
 
