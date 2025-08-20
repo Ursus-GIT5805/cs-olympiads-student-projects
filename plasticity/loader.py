@@ -5,7 +5,7 @@ import ml_datasets
 
 def load_mnist():
     (train_x, train_y), (test_x, test_y) = ml_datasets.mnist()
-
+   
     train_data = [
         (train_x[i].reshape(-1, 1), train_y[i].reshape(-1, 1))
         for i in range(train_x.shape[0])
@@ -19,6 +19,7 @@ def load_mnist():
     return train_data, test_data
 
 def load_mnist_raw():
+  
     return ml_datasets.mnist()
 
 def load_cifar10(path: str):

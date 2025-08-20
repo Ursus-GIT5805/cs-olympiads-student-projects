@@ -21,6 +21,7 @@ def getepochsforstudent(epoch,teacher_epochs,total_student_epochs,minepoch):
 
 if __name__ == '__main__':
     plt.ion()
+    train_data, test_data = loader.load_mnist_raw()
 
     _, ax = plt.subplots()
     (t_loss,) = ax.plot([], label="Teacher loss")
@@ -45,13 +46,12 @@ if __name__ == '__main__':
     optimizer = optax.sgd(learning_rate=0.1)
     opt_state=optimizer.init(model_student_along.params)
 
-    train_data, test_data = loader.load_mnist_raw()
 
 
     train_teacher_x, train_teacher_y = train_data
     # train_student_x, _ = train_student
     test_x, test_y = test_data
-    random_noise = jax.random.uniform(key, shape=(noise_amount_step * 30, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
+    random_noise = jax.random.uniform(key, shape=(noise_amount_step * eras, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
 
     key2 = jax.random.PRNGKey(69)
     random_noise_test = jax.random.uniform(key2, shape=(40000, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
@@ -71,7 +71,7 @@ if __name__ == '__main__':
             epochs=1, batch_size=batch_size,
             optimizer=optax.sgd(learning_rate=0.1),
             return_score=False,
-            seed=random.randint(0, int(1e7)),
+            key=jax.random.PRNGKey(random.randint(0, int(1e7))),
             # gamma=1,
             # p_slow=0
         )
@@ -80,7 +80,8 @@ if __name__ == '__main__':
 
         t_loss.set_xdata(np.arange(len(loss_teacher)))
         t_loss.set_ydata(loss_teacher)
-
+        # modelstudentlive = presets.Resnet1_mnist(key)
+        # for i in range(era+1):
         print("Live student epochs:")
         random_noise_step = random_noise[(era % 30)*noise_amount_step:((era%30)+1)*noise_amount_step]
         print(random_noise_step.device)
@@ -91,8 +92,9 @@ if __name__ == '__main__':
             optimizer = optimizer,
             l2=False,
             l2_eps=1e-6,
-            opt_state=opt_state
-        )
+            opt_state=opt_state,
+            key=jax.random.PRNGKey(random.randint(0, int(1e7))
+        ))
         l = model_student_along.loss(train_teacher_x, train_teacher_y)
         loss.append(l)
 
@@ -103,36 +105,37 @@ if __name__ == '__main__':
 
         along_student_acc = model_student_along.accuracy(test_x, test_y)
         accuracies.append(along_student_acc/100)
-        deads = model_student_along.deads(model_student_along.params,random_noise_test)
-        print(deads)
+        # deads = model_student_along.deads(model_student_along.params,random_noise_test)
+        # print(deads)
         along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
         div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
         student_epochs_along_divergence.append(div_stud_along_teacher)
 
-        ax.relim()
-        ax.autoscale_view()
+        # ax.relim()
+        # ax.autoscale_view()
 
-        plt.draw()
-        plt.pause(0.01)
+        # plt.draw()
+        # plt.pause(0.01)
 
 
-    plt.ioff()
-    plt.show()
+    # plt.ioff()
+    # plt.show()
 
-    print("After student epochs:")
+    # print("After student epochs:")
 
-    acc_train = model_teacher.accuracy(train_teacher_x, train_teacher_y)
-    acc_test = model_teacher.accuracy(test_x, test_y)
-    print("Accuracy teacher on training data: {}%".format(acc_train))
-    print("Accuracy teacher on test data: {}%".format(acc_test))
+    # acc_train = model_teacher.accuracy(train_teacher_x, train_teacher_y)
+    # acc_test = model_teacher.accuracy(test_x, test_y)
+    # print("Accuracy teacher on training data: {}%".format(acc_train))
+    # print("Accuracy teacher on test data: {}%".format(acc_test))
 
-    acc_train = model_student_along.accuracy(train_teacher_x, train_teacher_y)
-    acc_test = model_student_along.accuracy(test_x, test_y)
-    print("Accuracy live student on training data: {}%".format(acc_train))
-    print("Accuracy live student on test data: {}%".format(acc_test))
-    print([float(x) for x in student_epochs_along_divergence])
+    # acc_train = model_student_along.accuracy(train_teacher_x, train_teacher_y)
+    # acc_test = model_student_along.accuracy(test_x, test_y)
+    # print("Accuracy live student on training data: {}%".format(acc_train))
+    # print("Accuracy live student on test data: {}%".format(acc_test))
+    # print([float(x) for x in student_epochs_along_divergence])
 
-    plt.plot(loss, label="along student")
-    plt.plot(loss_teacher, label="teacher")
+    # plt.plot(loss, label="along student")
+    # plt.plot(loss_teacher, label="teacher")
 
-    plt.show()
+    # plt.show()
+print([float(x) for x in student_epochs_along_divergence])
