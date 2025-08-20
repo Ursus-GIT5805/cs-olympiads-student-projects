@@ -10,6 +10,7 @@ from model import batch_norm
 from model import kl_divergence
 from model import squaredmean_cost
 import presets
+from plotter import *
 
 import matplotlib.pyplot as plt
 import copy
@@ -26,30 +27,13 @@ def weight_diff(params):
     x = sum(jnp.mean(jnp.abs(jnp.max(p) - jnp.min(p))) for p in jax.tree_util.tree_leaves(params))
     return float(x)
 
-# unused
-def reset_weights(params, key, p=0.001):
-    """
-    Resets a certain percentage of weights
-    """
-    iterator = zip(params, jax.random.split(key, len(params)))
+def model_diff(model1, model2):
+    out = 0
 
-    out = []
-    for (w, b), k in iterator:
-        wk1, wk2, bk1, bk2 = jax.random.split(k, 4)
-
-        w1 = jax.random.bernoulli(wk1, p=p, shape=w.shape)
-        wr = jax.random.normal(wk2, w.shape)
-        wri = 1 - wr
-        w2 = (w*wr) + (w1*wri)
-
-        b1 = jax.random.bernoulli(bk1, p=p, shape=b.shape)
-        br = jax.random.normal(bk2, b.shape)
-        bri = 1 - br
-        b2 = (b*br) + (b1*bri)
-
-        param = (w2, b2)
-        out.append(param)
-
+    for (w1, b1), (w2, b2) in zip(model1.params, model2.params):
+        diff_w = optax.losses.cosine_similarity(w1.reshape(-1), w2.reshape(-1))
+        diff_b = optax.losses.cosine_similarity(b1, b2)
+        out = diff_w
     return out
 
 if __name__ == '__main__':
@@ -58,187 +42,140 @@ if __name__ == '__main__':
     seed = random.randint(0, int(1e9))
     print("Seed:", seed)
 
-    eras = 30
-    student_epochs = 15
+    # --- Constants ---
+    eras = 20
+    student_epochs = 10
     noise_amount_step = 40000
 
-    teacher_batch = 100
-    batch_size = 100
-
-    # ---
+    teacher_batch = 125
+    batch_size = 125
 
     lr_teacher = 0.1
-    lr=0.5
-
-    lr2=0.1
-    momentum0 = 0.6
-    momentum1 = 0.3
-    momentum2 = 0.9
-    momentum3 = 0.5
-    wd = 0.02
-    epoch_lines = []
+    wd_teacher = 0.0001
 
     # ---
 
     key = jax.random.PRNGKey(seed)
 
     model_teacher = presets.Resnet1_mnist(key)
+    # optimizer_teacher = optax.adamw(learning_rate=lr_teacher, weight_decay=wd_teacher)
+    optimizer_teacher = optax.sgd(learning_rate=lr_teacher)
+    opt_state_teacher = optimizer_teacher.init(model_teacher.params)
 
-    live_students = []
+    # Create learning methods + labels for the students
     optimizers = []
     labels = []
 
-    for lr, mom in [(0.175, 0.875), (0.2, 0.8), (0.2, None)]:
-    # for lr in [0.2, 0.5]:
-        # for mom in [0.0, 0.8]:
+    for lr, mom in [(0.1, None)]:
         optimizers.append( optax.sgd(learning_rate=lr, momentum=mom) )
         labels.append(f"sgd (lr={lr}, momentum={mom})")
 
+    # for lr, wd in [(lr_teacher, wd_teacher), (0.001, 0.005), (0.0001, 5e-7)]:
+        # optimizers.append( optax.adamw(learning_rate=lr, weight_decay=wd) )
+        # labels.append(f"adamw (lr={lr}, wd={wd})")
+
+    # for lr in [0.2, 0.3, 0.5]:
+        # optimizers.append( optax.adam(learning_rate=lr) )
+        # labels.append(f"adam (lr={lr})")
+
+    assert len(labels) == len(optimizers)
+
+    # Initialise Studens
+    live_students = []
+    opt_states = []
     for i in range(len(labels)):
         live_students.append( presets.Resnet1_mnist(key) )
+        opt_states.append( optimizers[i].init(live_students[i].params) )
 
-    after_student = presets.Resnet1_mnist(key)
-
-    assert len(live_students) == len(optimizers)
-    assert len(live_students) == len(labels)
 
     train_data, test_data = loader.load_mnist_raw()
     train_x, train_y = train_data
     test_x, test_y = test_data
 
-    divergences = []
-    accuracies = []
-    w = []
-    opt_states = []
+    plots = Plothandler()
 
-    # Create plots
-    fig_kl, ax_kl = plt.subplots()
-    ax_kl.set_xlabel("Epochs")
-    ax_kl.set_ylabel("KL Divergence")
+    plots["kl"] = Plot(
+        ylabel="KL divergence",
+        xlabel="Epochs",
+    )
+    plots["acc"] = Plot(
+        ylabel="Accuracy",
+        xlabel="Epochs",
+    )
+    plots["w"] = Plot(
+        ylabel="Sum over absolute weights",
+        xlabel="Epochs",
+    )
 
-    fig_acc, ax_acc = plt.subplots()
-    ax_acc.set_xlabel("Epochs")
-    ax_acc.set_ylabel("Accuracy over test cases")
-
-    fig_w, ax_w = plt.subplots()
-    ax_w.set_xlabel("Epochs")
-    ax_w.set_ylabel("Total weight")
-
-    # Line data
-    divergence_lines = []
-    accuracies_lines = []
-    weights_lines = []
-
-    for i in range(len(live_students)):
-        divergences.append([])
-        accuracies.append([])
-        w.append([])
-
-        (kl, ) = ax_kl.plot([], label=labels[i])
-        (accl,) = ax_acc.plot([], label=labels[i])
-        (wl,) = ax_w.plot([], label=labels[i])
-
-        divergence_lines.append(kl)
-        accuracies_lines.append(accl)
-        weights_lines.append(wl)
-
-        opt_states.append( optimizers[i].init(live_students[i].params) )
-
-    accs_teacher=[]
-    (t_acc,) = ax_acc.plot([], label="Teacher")
-
-    ax_kl.legend()
-    ax_acc.legend()
-    ax_w.legend()
-
-    info = f"Seed: {seed}"
-    ax_kl.text(0, 0, info)
-    ax_acc.text(0, 0, info)
-    ax_w.text(0, 0, info)
+    plt.show(block=False)
 
     # Start training
-    for era in range(eras):
+    for era, key2 in enumerate(jax.random.split(key, eras)):
         print("Era {}/{}".format(era+1, eras))
 
-        print("Teacher learning")
-        model_teacher.train(
+        opt_state_teacher = model_teacher.train(
             train_x, train_y,
             epochs=1, batch_size=teacher_batch,
-            optimizer=optax.sgd(learning_rate=lr_teacher),
+            optimizer=optimizer_teacher,
+            opt_state=opt_state_teacher,
+            verbose=False,
+            key=key,
         )
 
-        accs_teacher.append( model_teacher.accuracy(test_x, test_y) )
-        t_acc.set_xdata([student_epochs*x for x in range(len(accs_teacher))])
-        t_acc.set_ydata(accs_teacher)
+        x_pos = student_epochs*era
+        plots["acc"].append("teacher", model_teacher.accuracy(test_x, test_y), x=x_pos)
+        plots["w"].append("teacher", mean_weights(model_teacher.params), x=x_pos)
 
-        key2 = jax.random.PRNGKey(seed+era)
-        random_noise_test = jax.random.uniform(key2, shape=(noise_amount_step, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
-        teacher_data = model_teacher.forward(model_teacher.params, random_noise_test)
+        teacher_label = model_teacher.evaluate(train_x)
+        teacher_test_out = model_teacher.evaluate(test_x)
 
-        print("Live student epochs:")
         # Student epochs
         for student_epoch, key in enumerate(jax.random.split(key2, student_epochs)):
-            print("Epoch: {}/{}".format(student_epoch+1, student_epochs))
+            print("Student epoch: {}/{}".format(student_epoch+1, student_epochs))
 
-            noise = jax.random.uniform(key, shape=(noise_amount_step, 784), minval=-10.0, maxval=10.0)
-            noise_label = model_teacher.evaluate(noise)
+            keys = jax.random.split(key, len(live_students))
 
-            for i, model in enumerate(live_students):
+            for i, (model, key) in enumerate(zip(live_students, keys)):
+                name = labels[i]
+
+                k1, k2 = jax.random.split(key, 2)
+
+                noise = jax.random.uniform(k1, shape=(noise_amount_step, 784), minval=-1.0, maxval=1.0)
+                teacher_noise_out = model_teacher.evaluate(noise)
+
+                noise_train = jax.random.uniform(k2, shape=(noise_amount_step, 784), minval=-1.0, maxval=1.0)
+                noise_train_label = model_teacher.evaluate(noise_train)
+
                 opt_states[i] = model.train(
-                    random_noise_test, teacher_data,
+                    noise_train, noise_train_label,
                     epochs=1, batch_size=batch_size,
                     optimizer=optimizers[i],
                     opt_state=opt_states[i],
+                    verbose=False,
+                    key=key,
                     # l2=True,
                     # l2_eps=0.5*(1e-6),
                 )
 
-                divergences[i].append( kl_divergence(q=model.evaluate(noise), p=noise_label) )
-                divergence_lines[i].set_xdata(np.arange(len(divergences[i])))
-                divergence_lines[i].set_ydata(divergences[i])
+                noise_out = model.evaluate(noise)
+                test_out = model.evaluate(test_x)
 
-                accuracies[i].append( model.accuracy(test_x, test_y) )
-                accuracies_lines[i].set_xdata(np.arange(len(accuracies[i])))
-                accuracies_lines[i].set_ydata(accuracies[i])
+                kl_o = f"{name} on test data"
+                kl_r = f"{name} on noise"
 
-                w[i].append( mean_weights(model.params) )
-                weights_lines[i].set_xdata(np.arange(len(w[i])))
-                weights_lines[i].set_ydata(w[i])
+                plots["kl"].append(kl_o, kl_divergence(q=test_out, p=teacher_test_out))
+                plots["kl"].append(kl_r, kl_divergence(q=noise_out, p=teacher_noise_out))
 
-                print("Divergence [{}]: {}".format(labels[i], divergences[i][-1]))
 
-                time.sleep(0.25)
+                plots["acc"].append(name, model.accuracy(test_x, test_y))
+                plots["w"].append(name, mean_weights(model.params))
+
+                time.sleep(0.1) # Slow a bit, my CPU is sweating o.O
 
             # =====
 
-            ax_kl.relim()
-            ax_kl.autoscale_view()
-
-            ax_acc.relim()
-            ax_acc.autoscale_view()
-
-            ax_w.relim()
-            ax_w.autoscale_view()
-
-            plt.draw()
-            plt.pause(0.01)
-
-
-    # Print accuracies
-    acc_train = model_teacher.accuracy(train_x, train_y)
-    acc_test = model_teacher.accuracy(test_x, test_y)
-    print("Accuracy teacher on training data: {}%".format(acc_train))
-    print("Accuracy teacher on test data: {}%".format(acc_test))
-
-    acc_train = model_student_along.accuracy(train_x, train_y)
-    acc_test = model_student_along.accuracy(test_x, test_y)
-    print("Accuracy live student on training data: {}%".format(acc_train))
-    print("Accuracy live student on test data: {}%".format(acc_test))
-
-    acc_train = model_student_along2.accuracy(train_x, train_y)
-    acc_test = model_student_along2.accuracy(test_x, test_y)
-    print("Accuracy live student2 on training data: {}%".format(acc_train))
-    print("Accuracy live student2 on test data: {}%".format(acc_test))
+            plots.draw()
+            plt.pause(0.5)
 
     plt.ioff()
     plt.show()
