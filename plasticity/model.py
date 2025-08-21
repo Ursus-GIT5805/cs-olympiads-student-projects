@@ -119,6 +119,15 @@ def crossentropy_cost(a, y):
 def squaredmean_cost(a, y):
     return jnp.mean( (a-y) ** 2 )
 
+@partial(jax.jit, static_argnames=('forward'))
+def measure_accuracy(params, forward, x, y):
+    a = forward(params, x)
+
+    a_label = jnp.argmax(a, axis=1)
+    t_label = jnp.argmax(y, axis=1)
+
+    return jnp.sum(a_label == t_label) / x.shape[0] * 100
+
 
 # ===== Training =====
 
@@ -300,14 +309,7 @@ class Model:
         test_x,
         test_y,
     ):
-        self.assert_data_shape(test_x, test_y)
-
-        a = self.forward(self.params, test_x)
-
-        a_label = jnp.argmax(a, axis=1)
-        t_label = jnp.argmax(test_y, axis=1)
-
-        return jnp.sum(a_label == t_label) / test_x.shape[0] * 100
+        return measure_accuracy(self.params, self.forward, test_x, test_y)
 
     def evaluate(self, a):
         return self.forward(self.params, a)
