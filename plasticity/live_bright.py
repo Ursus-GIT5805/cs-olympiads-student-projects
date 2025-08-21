@@ -14,29 +14,11 @@ import matplotlib.pyplot as plt
 import copy
 import random
 import math
-
+import os
 
 if __name__ == "__main__":
-    plt.ion()
-
-    seed = random.randint(0, int(1e9))
-    print("Seed:", seed)
-
-    plots = Plothandler()
-    plots["loss"] = Plot(
-        xlabel="Epochs",
-        ylabel="Loss over test data",
-    )
-    plots["acc"] = Plot(
-        xlabel="Epochs",
-        ylabel="Accuracy test data",
-    )
-    plots["kl"] = Plot(
-        xlabel="Epochs",
-        ylabel="KL divergence",
-    )
-
     # --- Variables ---
+    seed = random.randint(0, int(1e9))
 
     eras = 20
     student_epochs = 15
@@ -45,8 +27,30 @@ if __name__ == "__main__":
     batch_size = 128
 
     lr = 0.1
-
     # ---
+
+
+    plt.ion()
+    plots = Plothandler()
+    title=f"Seed {seed}\n{os.path.basename(__file__)}"
+
+    print("Seed:", seed)
+    plots["loss"] = Plot(
+        title=title,
+        xlabel="Epochs",
+        ylabel="Loss over test data",
+    )
+    plots["acc"] = Plot(
+        title=title,
+        xlabel="Epochs",
+        ylabel="Accuracy test data",
+    )
+    plots["kl"] = Plot(
+        title=title,
+        xlabel="Epochs",
+        ylabel="KL divergence",
+    )
+
 
     orig_key = jax.random.PRNGKey(seed)
 

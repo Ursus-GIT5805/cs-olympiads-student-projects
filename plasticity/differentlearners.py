@@ -2,6 +2,7 @@ import math
 import jax
 import optax
 import numpy as np
+import os
 
 import loader
 from linear import *
@@ -34,12 +35,9 @@ def model_diff(model1, model2):
     return out
 
 if __name__ == '__main__':
-    plt.ion()
-
+    # --- Variables ---
     seed = random.randint(0, int(1e9))
-    print("Seed:", seed)
 
-    # --- Constants ---
     eras = 20
     student_epochs = 10
     noise_amount_step = 40000
@@ -47,35 +45,35 @@ if __name__ == '__main__':
     teacher_batch = 125
     batch_size = 125
 
-    lr_teacher = 0.1
-    wd_teacher = 0.0001
-
+    lr_teacher = 4e-4
+    wd_teacher = 1e-4
     # ---
+
+    plt.ion()
+    print("Seed:", seed)
 
     key = jax.random.PRNGKey(seed)
 
     model_teacher = presets.Resnet1_mnist(key)
-    # optimizer_teacher = optax.adamw(learning_rate=lr_teacher, weight_decay=wd_teacher)
-    optimizer_teacher = optax.sgd(learning_rate=lr_teacher)
+    optimizer_teacher = optax.adamw(learning_rate=lr_teacher, weight_decay=wd_teacher)
+    # optimizer_teacher = optax.sgd(learning_rate=lr_teacher)
     opt_state_teacher = optimizer_teacher.init(model_teacher.params)
 
     # Create learning methods + labels for the students
     optimizers = []
     labels = []
 
-    for lr, mom in [(0.1, None), (0.2, 0.8)]:
+    for lr, mom in [(0.2, 0.8)]:
         optimizers.append( optax.sgd(learning_rate=lr, momentum=mom) )
         labels.append(f"sgd (lr={lr}, momentum={mom})")
 
-    for lr, wd in [(0.0001, 0.1), (0.0001, 0.0005)]:
+    for lr, wd in [(0.001, 0.1), (0.001, 0.0005)]:
         optimizers.append( optax.adamw(learning_rate=lr, weight_decay=wd) )
         labels.append(f"adamw (lr={lr}, wd={wd})")
 
     # for lr in [0.2, 0.3, 0.5]:
         # optimizers.append( optax.adam(learning_rate=lr) )
         # labels.append(f"adam (lr={lr})")
-
-
 
 
     assert len(labels) == len(optimizers)
@@ -95,15 +93,21 @@ if __name__ == '__main__':
 
     plots = Plothandler()
 
+
+    title=f"Seed {seed}\n{os.path.basename(__file__)}"
+
     plots["kl"] = Plot(
+        title=title,
         ylabel="KL divergence",
         xlabel="Epochs",
     )
     plots["acc"] = Plot(
+        title=title,
         ylabel="Accuracy",
         xlabel="Epochs",
     )
     plots["w"] = Plot(
+        title=title,
         ylabel="Sum over absolute weights",
         xlabel="Epochs",
     )
@@ -141,10 +145,10 @@ if __name__ == '__main__':
 
                 k1, k2 = jax.random.split(key, 2)
 
-                noise = jax.random.uniform(k1, shape=(noise_amount_step, 784), minval=-1.0, maxval=1.0)
+                noise = jax.random.uniform(k1, shape=(noise_amount_step, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
                 teacher_noise_out = model_teacher.evaluate(noise)
 
-                noise_train = jax.random.uniform(k2, shape=(noise_amount_step, 784), minval=-1.0, maxval=1.0)
+                noise_train = jax.random.uniform(k2, shape=(noise_amount_step, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
                 noise_train_label = model_teacher.evaluate(noise_train)
 
                 opt_states[i] = model.train(

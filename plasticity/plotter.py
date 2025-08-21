@@ -2,12 +2,18 @@ import matplotlib.pyplot as plt
 
 # Plot helper class
 class Plot:
-    def __init__(self, ylabel="", xlabel=""):
+    def __init__(
+        self,
+        title="",
+        ylabel="",
+        xlabel="",
+    ):
         self.fig, self.ax = plt.subplots()
         self.lines = {}
 
         if 0 < len(ylabel): self.ax.set_ylabel(ylabel)
         if 0 < len(xlabel): self.ax.set_xlabel(xlabel)
+        if 0 < len(title): self.ax.set_title(title)
 
         self.ax.grid()
 
