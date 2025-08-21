@@ -61,6 +61,7 @@ if __name__ == "__main__":
     optimizer = optax.sgd(learning_rate=lr)
     # live_student_opt_state = optimizer.init(live_student.params)
 
+    loss_fn = gen_loss_function(teacher.forward, crossentropy_cost)
     (train_x, train_y), (test_x, test_y) = loader.load_mnist_raw()
 
     era_keys = jax.random.split(orig_key, eras)
@@ -73,6 +74,7 @@ if __name__ == "__main__":
             epochs=1, batch_size=128,
             verbose=False,
             optimizer=teacher_optimizer,
+            loss_fn=loss_fn,
             key=key,
         )
 
@@ -85,6 +87,7 @@ if __name__ == "__main__":
             epochs=student_epochs, batch_size=batch_size,
             verbose=False,
             optimizer=optimizer,
+            loss_fn=loss_fn,
             # opt_state=live_student_opt_state,
             key=key,
         )
@@ -102,6 +105,7 @@ if __name__ == "__main__":
                 epochs=student_epochs, batch_size=batch_size,
                 optimizer=optimizer,
                 verbose=False,
+                loss_fn=loss_fn,
                 # opt_state=opt_state,
                 key=era_keys[i],
             )
