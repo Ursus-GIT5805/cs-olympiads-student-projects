@@ -118,7 +118,7 @@ if __name__ == '__main__':
             train_noise_y = model_teacher.evaluate(train_noise)
 
             key, student_train_key = jax.random.split(key)
-            model_student_live.params, optimizer_student_state, losses = train_epoch(
+            model_student_live.params, optimizer_student_state_live, losses = train_epoch(
                 params=model_student_live.params,
                 x=train_noise,
                 y=train_noise_y,
