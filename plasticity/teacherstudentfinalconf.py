@@ -80,21 +80,21 @@ if __name__ == '__main__':
 
         t_loss.set_xdata(np.arange(len(loss_teacher)))
         t_loss.set_ydata(loss_teacher)
-        # modelstudentlive = presets.Resnet1_mnist(key)
-        # for i in range(era+1):
-        print("Live student epochs:")
-        random_noise_step = random_noise[(era % 30)*noise_amount_step:((era%30)+1)*noise_amount_step]
-        print(random_noise_step.device)
-        train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
-        opt_state = model_student_along.train(
-            random_noise_step, train_student_y,
-            epochs=student_epochs, batch_size=batch_size,
-            optimizer = optimizer,
-            l2=False,
-            l2_eps=1e-6,
-            opt_state=opt_state,
-            key=jax.random.PRNGKey(random.randint(0, int(1e7))
-        ))
+        brightschtudent = presets.Resnet1_mnist(key)
+        for i in range(era+1):
+            print("Live student epochs:")
+            random_noise_step = random_noise[(i % 30)*noise_amount_step:((i%30)+1)*noise_amount_step]
+            print(random_noise_step.device)
+            train_student_y = model_teacher.forward(model_teacher.params, random_noise_step)
+            opt_state = brightschtudent.train(
+                random_noise_step, train_student_y,
+                epochs=student_epochs, batch_size=batch_size,
+                optimizer = optimizer,
+                l2=False,
+                l2_eps=1e-6,
+                opt_state=opt_state,
+                key=jax.random.PRNGKey(random.randint(0, int(1e7))
+            ))
         l = model_student_along.loss(train_teacher_x, train_teacher_y)
         loss.append(l)
 
@@ -107,7 +107,7 @@ if __name__ == '__main__':
         accuracies.append(along_student_acc/100)
         # deads = model_student_along.deads(model_student_along.params,random_noise_test)
         # print(deads)
-        along_student_data = model_student_along.forward(model_student_along.params, random_noise_test)
+        along_student_data = brightschtudent.forward(brightschtudent.params, random_noise_test)
         div_stud_along_teacher = kl_divergence(q=along_student_data, p=teacher_data)
         student_epochs_along_divergence.append(div_stud_along_teacher)
 

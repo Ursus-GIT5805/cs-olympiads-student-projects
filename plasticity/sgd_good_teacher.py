@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import loader
 import presets
 from model import *
-from model import _gen_loss_function
+from model import gen_loss_function
 
 # DO NOT CHANGE TEACHER. I TUNED FOR THE BEST POSSIBLE TEACHER (Alessandro Farcaş)
 # adamw lr: 0.0005; wd: 0.0001; bs: 125
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     model_teacher = presets.Resnet1_mnist(models_seeds)
     optimizer_teacher = optax.adamw(learning_rate=teacher_lr, weight_decay=teacher_wd)
     optimizer_teacher_state = optimizer_teacher.init(model_teacher.params)
-    loss_fn_teacher = _gen_loss_function(model_teacher.forward, crossentropy_cost)
+    loss_fn_teacher = gen_loss_function(model_teacher.forward, crossentropy_cost)
 
     # set up interactive plot
     plt.ion()
@@ -41,11 +41,11 @@ if __name__ == '__main__':
     fig, ax_kldiv = plt.subplots()
 
     line_acc_teach, = ax_accuracy.plot([], label="Teacher (adamw, lr=5e-4; wd=1e-4)")
-    line_acc_student_live, = ax_accuracy.plot([], label="Live Student (sgd, lr=0.2; mom=0.8)")
+    line_acc_student_live, = ax_accuracy.plot([], label="Live Student (sgd, lr=0.2; momentum=0.8)")
     ax_accuracy.set_xlabel("Epoch")
     ax_accuracy.set_ylabel("Accuracy")
 
-    line_kl_student_live, = ax_kldiv.plot([], label="Live Student (sgd, lr=0.2; wd=0.8)")
+    line_kl_student_live, = ax_kldiv.plot([], label="Live Student (sgd, lr=0.2; momentum=0.8)")
     ax_kldiv.set_xlabel("Epoch")
     ax_kldiv.set_ylabel("KL divergence")
 
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     optimizer_student_live = optax.sgd(learning_rate=0.2, momentum=0.8)
     optimizer_student_live_state = optimizer_student_live.init(model_student_live.params)
 
-    loss_fn_student = _gen_loss_function(model_student_live.forward, crossentropy_cost)
+    loss_fn_student = gen_loss_function(model_student_live.forward, crossentropy_cost)
 
     # Data collection for plot
 
@@ -118,7 +118,7 @@ if __name__ == '__main__':
             train_noise_y = model_teacher.evaluate(train_noise)
 
             key, student_train_key = jax.random.split(key)
-            model_student_live.params, optimizer_student_state, losses = train_epoch(
+            model_student_live.params, optimizer_student_state_live, losses = train_epoch(
                 params=model_student_live.params,
                 x=train_noise,
                 y=train_noise_y,
