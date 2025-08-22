@@ -34,6 +34,9 @@ if __name__ == "__main__":
     student_lr = 5e-5
     student_wd = 1e-6
 
+    optimizer_student_live = optax.adamw(learning_rate=student_lr, weight_decay=student_wd)
+    student_label = f"Live Student (adamw, lr={student_lr}; wd={student_wd})"
+
     student_epochs = 15
     batch_size_student = 100
 
@@ -94,15 +97,13 @@ if __name__ == "__main__":
         maxval=math.sqrt(3),
     )
 
-    optimizer_student_live = optax.adamw(learning_rate=student_lr, weight_decay=student_wd)
     optimizer_student_live_state = optimizer_student_live.init(
         model_student_live.params
     )
 
     loss_fn_student = gen_loss_function(model_student_live.forward, crossentropy_cost)
 
-    label_teacher = f"Teacher (adamw, lr={teacher_lr}; wd={teacher_wd})"
-    student_label = f"Live Student (adamw, lr={student_lr}; wd={student_wd})"
+    teacher_label = f"Teacher (adamw, lr={teacher_lr}; wd={teacher_wd})"
 
     for era in range(teacher_eras):
         print("Era: {}/{}".format(era + 1, teacher_eras))
@@ -125,8 +126,8 @@ if __name__ == "__main__":
         mnist_y_teach = model_teacher.evaluate(test_x)
         wg_teach_d = mean_weights(model_teacher.params)
 
-        plots["acc"].append(label_teacher, acc_teacher_test, x=era*student_epochs)
-        plots["w"].append(label_teacher, wg_teach_d, x=era*student_epochs)
+        plots["acc"].append(teacher_label, acc_teacher_test, x=era*student_epochs)
+        plots["w"].append(teacher_label, wg_teach_d, x=era*student_epochs)
 
         for epoch in range(student_epochs):
             print("Epoch: {}/{}".format(epoch + 1, student_epochs))
