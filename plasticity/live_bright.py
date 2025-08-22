@@ -1,20 +1,16 @@
 import math
 import jax
 import optax
-
-import numpy as np
+import os
 
 import loader
-from linear import *
-from model import *
+from model import kl_divergence, crossentropy_cost, gen_loss_function
+
 import presets
-from plotter import *
+from plotter import Plot, Plothandler
 
 import matplotlib.pyplot as plt
-import copy
 import random
-import math
-import os
 
 if __name__ == "__main__":
     # --- Variables ---
@@ -29,10 +25,9 @@ if __name__ == "__main__":
     lr = 0.1
     # ---
 
-
     plt.ion()
     plots = Plothandler()
-    title=f"Seed {seed}\n{os.path.basename(__file__)}"
+    title = f"Seed {seed}\n{os.path.basename(__file__)}"
 
     print("Seed:", seed)
     plots["loss"] = Plot(
@@ -51,7 +46,6 @@ if __name__ == "__main__":
         ylabel="KL divergence",
     )
 
-
     orig_key = jax.random.PRNGKey(seed)
 
     teacher_optimizer = optax.sgd(learning_rate=lr)
@@ -67,24 +61,33 @@ if __name__ == "__main__":
     era_keys = jax.random.split(orig_key, eras)
 
     for era, key in enumerate(era_keys):
-        print("Era {}/{}".format(era+1, eras))
+        print("Era {}/{}".format(era + 1, eras))
 
         teacher.train(
-            train_x, train_y,
-            epochs=1, batch_size=128,
+            train_x,
+            train_y,
+            epochs=1,
+            batch_size=128,
             verbose=False,
             optimizer=teacher_optimizer,
             loss_fn=loss_fn,
             key=key,
         )
 
-        noise = jax.random.uniform(key, shape=(noise_amount_step, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
+        noise = jax.random.uniform(
+            key,
+            shape=(noise_amount_step, 784),
+            minval=-math.sqrt(3),
+            maxval=math.sqrt(3),
+        )
         noise_label = teacher.evaluate(noise)
 
         print("Training live student")
         live_student_opt_state = live_student.train(
-            noise, noise_label,
-            epochs=student_epochs, batch_size=batch_size,
+            noise,
+            noise_label,
+            epochs=student_epochs,
+            batch_size=batch_size,
             verbose=False,
             optimizer=optimizer,
             loss_fn=loss_fn,
@@ -95,14 +98,21 @@ if __name__ == "__main__":
         print("Training bright student")
         bright_student = presets.Resnet1_mnist(orig_key)
         # opt_state = optimizer.init(bright_student.params)
-        num_epochs = (era+1)*student_epochs
-        for i in range(era+1):
-            e_noise = jax.random.uniform(era_keys[i], shape=(noise_amount_step, 784), minval=-math.sqrt(3), maxval=math.sqrt(3))
+        num_epochs = (era + 1) * student_epochs
+        for i in range(era + 1):
+            e_noise = jax.random.uniform(
+                era_keys[i],
+                shape=(noise_amount_step, 784),
+                minval=-math.sqrt(3),
+                maxval=math.sqrt(3),
+            )
             e_noise_label = teacher.evaluate(e_noise)
 
             opt_state = bright_student.train(
-                e_noise, e_noise_label,
-                epochs=student_epochs, batch_size=batch_size,
+                e_noise,
+                e_noise_label,
+                epochs=student_epochs,
+                batch_size=batch_size,
                 optimizer=optimizer,
                 verbose=False,
                 loss_fn=loss_fn,

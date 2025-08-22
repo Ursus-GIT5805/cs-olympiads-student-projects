@@ -1,13 +1,16 @@
 import jax
-from model import *
+import jax.numpy as jnp
+
+from model import Model, batch_norm
 from linear import linear, feedforward_linear, linears_from_array
 
+
 def get_dead(a):
-    return jnp.sum(abs(a)<1e-6)
+    return jnp.sum(abs(a) < 1e-6)
 
 
 def Resnet1_mnist(key):
-    k1,k2,k3,k4 = jax.random.split(key, 4)
+    k1, k2, k3, k4 = jax.random.split(key, 4)
 
     params = [
         linear(784, 100, k1),
@@ -33,7 +36,7 @@ def Resnet1_mnist(key):
         a = jax.nn.relu(a)
 
         a = feedforward_linear(params[3], a)
-        a = jax.nn.softmax( a )
+        a = jax.nn.softmax(a)
         return a
 
     return Model.init(
@@ -42,9 +45,6 @@ def Resnet1_mnist(key):
         input_dim=784,
         output_dim=10,
     )
-
-
-
 
 
 def Resnet2_mnist(key):
@@ -76,13 +76,13 @@ def Resnet2_mnist(key):
         a = jax.nn.relu(a)
 
         a = feedforward_linear(params[2], a)
-        a = jax.nn.sigmoid( a )
+        a = jax.nn.relu(a)
 
         a = resblock(params[3], a)
         a = jax.nn.relu(a)
 
         a = feedforward_linear(params[4], a)
-        a = jax.nn.softmax( a )
+        a = jax.nn.softmax(a)
         return a
 
     return Model.init(
@@ -95,6 +95,7 @@ def Resnet2_mnist(key):
 
 def Linear1_mnist(key):
     params = linears_from_array([784, 100, 100, 10])
+
     def run(params, a):
         for p in params:
             a = feedforward_linear(p, a)

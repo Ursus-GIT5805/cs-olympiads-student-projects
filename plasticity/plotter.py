@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 
+
 # Plot helper class
 class Plot:
     def __init__(
@@ -11,28 +12,32 @@ class Plot:
         self.fig, self.ax = plt.subplots()
         self.lines = {}
 
-        if 0 < len(ylabel): self.ax.set_ylabel(ylabel)
-        if 0 < len(xlabel): self.ax.set_xlabel(xlabel)
-        if 0 < len(title): self.ax.set_title(title)
+        if 0 < len(ylabel):
+            self.ax.set_ylabel(ylabel)
+        if 0 < len(xlabel):
+            self.ax.set_xlabel(xlabel)
+        if 0 < len(title):
+            self.ax.set_title(title)
 
         self.ax.grid()
 
     def create_line(self, name):
-        l = self.ax.plot([], label=name)
+        line_plt = self.ax.plot([], label=name)
 
         self.lines[name] = {
-            'line': l[0],
-            'x': [],
-            'y': [],
+            "line": line_plt[0],
+            "x": [],
+            "y": [],
         }
         self.ax.legend()
 
     # Append a new data point to the line with NAME
     def append(self, name, y, x=None):
-        if not (name in self.lines): self.create_line(name)
+        if name not in self.lines:
+            self.create_line(name)
         line = self.lines[name]
 
-        if x == None:
+        if x is None:
             x = 0.0
             if 0 < len(line["x"]):
                 x = line["x"][-1] + 1.0
@@ -49,6 +54,7 @@ class Plot:
         self.ax.relim()
         self.ax.autoscale_view()
 
+
 # Plothandler helper class
 class Plothandler:
     def __init__(self):
@@ -60,7 +66,8 @@ class Plothandler:
     def __setitem__(self, key, value):
         self.plots[key] = value
 
-    def draw(self):
+    def draw(self, wait=0.001):
         for plot in self.plots.values():
             plot.draw()
         plt.draw()
+        plt.pause(wait)

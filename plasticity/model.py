@@ -1,24 +1,27 @@
 import jax
 import jax.numpy as jnp
 import optax
-import random
 import dill as pickle
 import math
 from dataclasses import dataclass
 from functools import partial
 import sys
 
+
 @jax.jit
 def batch_norm(x):
     mean = jnp.mean(x)
     var = jnp.var(x)
-    return jnp.nan_to_num((x-mean) / jnp.sqrt(var))
+    return jnp.nan_to_num((x - mean) / jnp.sqrt(var))
+
 
 # =====
+
 
 def _flatten_leaves(params):
     leaves, treedef = jax.tree_util.tree_flatten(params)
     return leaves, treedef
+
 
 def _concat_abs_and_meta(leaves, kind):
     """
@@ -30,9 +33,9 @@ def _concat_abs_and_meta(leaves, kind):
     abs_chunks = []
     metas = []
     for i, x in enumerate(leaves):
-        is_weight = (x.ndim == 2)
-        is_bias   = (x.ndim == 1)
-        is_target = (is_weight if kind == 'weight' else is_bias)
+        is_weight = x.ndim == 2
+        is_bias = x.ndim == 1
+        is_target = is_weight if kind == "weight" else is_bias
         metas.append((i, x.shape, is_target))
         if is_target:
             abs_chunks.append(jnp.abs(jnp.ravel(x)))
@@ -41,6 +44,7 @@ def _concat_abs_and_meta(leaves, kind):
     else:
         abs_all = jnp.array([], dtype=leaves[0].dtype if leaves else jnp.float32)
     return abs_all, metas
+
 
 def _threshold_for_top_p(abs_all, p):
     total = abs_all.size
@@ -54,6 +58,7 @@ def _threshold_for_top_p(abs_all, p):
     thresh = sorted_vals[-k]  # may include ties
     return thresh
 
+
 def reset_top_by_magnitude(params, key, p=0.2):
     """
     Reset the top p-fraction (by absolute value) of:
@@ -64,8 +69,8 @@ def reset_top_by_magnitude(params, key, p=0.2):
     leaves, treedef = _flatten_leaves(params)
 
     # Compute thresholds separately
-    abs_w_all, metas_w = _concat_abs_and_meta(leaves, 'weight')
-    abs_b_all, metas_b = _concat_abs_and_meta(leaves, 'bias')
+    abs_w_all, metas_w = _concat_abs_and_meta(leaves, "weight")
+    abs_b_all, metas_b = _concat_abs_and_meta(leaves, "bias")
     thresh_w = _threshold_for_top_p(abs_w_all, p)
     thresh_b = _threshold_for_top_p(abs_b_all, p)
 
@@ -73,7 +78,7 @@ def reset_top_by_magnitude(params, key, p=0.2):
     keys = jax.random.split(key, len(leaves))
 
     new_leaves = []
-    for (i, x) in enumerate(leaves):
+    for i, x in enumerate(leaves):
         k_leaf = keys[i]
         if x.ndim == 2 and thresh_w is not None:
             # weights
@@ -99,27 +104,32 @@ def reset_top_by_magnitude(params, key, p=0.2):
 
 @jax.jit
 def kl_divergence(p, q):
-    eps=1e-12
+    eps = 1e-12
     p = jnp.clip(p, eps, 1.0)
     q = jnp.clip(q, eps, 1.0)
     return jnp.mean(p * (jnp.log(p) - jnp.log(q)))
+
 
 @jax.jit
 def kl_divergence_cost(a, y):
     return kl_divergence(y, a)
 
+
 # =====
+
 
 @jax.jit
 def crossentropy_cost(a, y):
     eps = 0.001
-    return jnp.mean(-y * jnp.log(a+eps) - (1-y) * jnp.log1p(-a+eps))
+    return jnp.mean(-y * jnp.log(a + eps) - (1 - y) * jnp.log1p(-a + eps))
+
 
 @jax.jit
 def squaredmean_cost(a, y):
-    return jnp.mean( (a-y) ** 2 )
+    return jnp.mean((a - y) ** 2)
 
-@partial(jax.jit, static_argnames=('forward'))
+
+@partial(jax.jit, static_argnames=("forward"))
 def measure_accuracy(params, forward, x, y):
     a = forward(params, x)
 
@@ -131,26 +141,25 @@ def measure_accuracy(params, forward, x, y):
 
 # ===== Training =====
 
-def gen_loss_function(
-        run,
-        cost,
-        l2=False,
-        l2_eps=1e-4
-):
+
+def gen_loss_function(run, cost, l2=False, l2_eps=1e-4):
     if l2:
+
         def loss_fn(params, x, y):
             a = run(params, x)
             l2_loss = sum(jnp.sum(p**2) for p in jax.tree_util.tree_leaves(params))
-            return cost(a, y) + l2_loss*l2_eps
+            return cost(a, y) + l2_loss * l2_eps
 
     else:
+
         def loss_fn(params, x, y):
             a = run(params, x)
             return cost(a, y)
 
     return jax.jit(loss_fn)
 
-@partial(jax.jit, static_argnames=('optimizer', 'loss_fn', 'batches', 'batch_size'))
+
+@partial(jax.jit, static_argnames=("optimizer", "loss_fn", "batches", "batch_size"))
 def train_epoch(params, opt_state, x, y, optimizer, loss_fn, batches, batch_size, key):
     x = jax.random.permutation(key, x, axis=0)
     y = jax.random.permutation(key, y, axis=0)
@@ -166,12 +175,14 @@ def train_epoch(params, opt_state, x, y, optimizer, loss_fn, batches, batch_size
         params = optax.apply_updates(params, updates)
         return (params, opt_state), loss
 
-    (params, opt_state), losses = jax.lax.scan(step, (params, opt_state), jnp.arange(batches))
+    (params, opt_state), losses = jax.lax.scan(
+        step, (params, opt_state), jnp.arange(batches)
+    )
     return params, opt_state, losses
 
 
-
 # ===== Model =====
+
 
 @dataclass
 class Model:
@@ -199,14 +210,15 @@ class Model:
 
         if self.input_dim and (x.shape != (n, self.input_dim)):
             raise ValueError(
-                "Input most be of shape {}, not {}"
-                .format((n, self.input_dim), x.shape)
+                "Input most be of shape {}, not {}".format((n, self.input_dim), x.shape)
             )
 
         if self.output_dim and (y.shape != (n, self.output_dim)):
             raise ValueError(
-                "Output most be of shape {}, not {}"
-                .format(n, self.output_dim, y.shape)
+                "Output most be of shape {}, not {}".format(
+                    n,
+                    self.output_dim,
+                )
             )
 
     def model_reset_top(self, p=0.2, seed=0):
@@ -224,10 +236,10 @@ class Model:
         batch_size=128,
         optimizer=optax.sgd(learning_rate=0.01),
         cost=crossentropy_cost,
-        return_score=False, # Returns a list of losses per batch
+        return_score=False,  # Returns a list of losses per batch
         opt_state=None,
-        evaluate=None, # Prints a list of losses corresponding to the given test data
-        key = None,
+        evaluate=None,  # Prints a list of losses corresponding to the given test data
+        key=None,
         batches=None,
         verbose=True,
         l2=False,
@@ -235,18 +247,15 @@ class Model:
         eval_fn=None,
         loss_fn=None,
     ):
-        if key == None:
+        if key is None:
             print("PASS A KEY TO MODEL.TRAIN")
             sys.exit(1)
 
-        n = train_x.shape[0]
-
-        if opt_state == None:
+        if opt_state is None:
             opt_state = optimizer.init(self.params)
 
         self.assert_data_shape(train_x, train_y)
 
-        r = n
         if not batches:
             batches = train_x.shape[0] // batch_size
         if not batch_size:
@@ -254,10 +263,11 @@ class Model:
 
         scores = []
 
-        if loss_fn == None:
+        if loss_fn is None:
             loss_fn = gen_loss_function(self.forward, cost, l2=l2, l2_eps=l2_eps)
 
-        if not eval_fn: eval_fn = cost
+        if not eval_fn:
+            eval_fn = cost
         eval_fn = gen_loss_function(self.forward, eval_fn, l2=l2, l2_eps=l2_eps)
 
         if evaluate:
@@ -265,7 +275,8 @@ class Model:
             self.assert_data_shape(tx, ty)
 
         for epoch in range(epochs):
-            if verbose: print("Epoch {}/{}".format(epoch+1, epochs))
+            if verbose:
+                print("Epoch {}/{}".format(epoch + 1, epochs))
 
             key, key_temp = jax.random.split(key)
 
@@ -278,7 +289,7 @@ class Model:
                 loss_fn=loss_fn,
                 batches=batches,
                 batch_size=batch_size,
-                key=key_temp
+                key=key_temp,
             )
 
             if return_score and not evaluate:
@@ -287,8 +298,8 @@ class Model:
             if evaluate:
                 loss, _ = jax.value_and_grad(eval_fn)(self.params, tx, ty)
                 scores.append(loss)
-                # print(loss)
-                if verbose: print("Loss: {}".format(loss))
+                if verbose:
+                    print("Loss: {}".format(loss))
 
         if return_score:
             return scores, opt_state
@@ -297,7 +308,8 @@ class Model:
 
     def loss(
         self,
-        tx, ty,
+        tx,
+        ty,
         cost=crossentropy_cost,
     ):
         loss_fn = gen_loss_function(self.forward, cost)
