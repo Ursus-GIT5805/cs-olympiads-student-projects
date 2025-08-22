@@ -72,7 +72,7 @@ if __name__ == "__main__":
             optimizer=optimizer_teacher,
             opt_state=opt_state_teacher,
             verbose=False,
-            # loss_fn=loss_fn,
+            loss_fn=loss_fn,
             key=k1,
         )
 

@@ -64,8 +64,7 @@ if __name__ == "__main__":
         print("Era {}/{}".format(era + 1, eras))
 
         teacher.train(
-            train_x,
-            train_y,
+            train_x, train_y,
             epochs=1,
             batch_size=128,
             verbose=False,
@@ -91,13 +90,13 @@ if __name__ == "__main__":
             verbose=False,
             optimizer=optimizer,
             loss_fn=loss_fn,
-            # opt_state=live_student_opt_state,
+            opt_state=live_student_opt_state,
             key=key,
         )
 
         print("Training bright student")
         bright_student = presets.Resnet1_mnist(orig_key)
-        # opt_state = optimizer.init(bright_student.params)
+        opt_state = optimizer.init(bright_student.params)
         num_epochs = (era + 1) * student_epochs
         for i in range(era + 1):
             e_noise = jax.random.uniform(
@@ -116,7 +115,7 @@ if __name__ == "__main__":
                 optimizer=optimizer,
                 verbose=False,
                 loss_fn=loss_fn,
-                # opt_state=opt_state,
+                opt_state=opt_state,
                 key=era_keys[i],
             )
 
