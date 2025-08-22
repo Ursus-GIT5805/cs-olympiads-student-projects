@@ -1,6 +1,9 @@
+"""
+Methods working with linear layers
+"""
+
 import jax
 import jax.numpy as jnp
-
 
 def linear(input_dim, output_dim, key):
     """

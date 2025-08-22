@@ -1,5 +1,8 @@
-import matplotlib.pyplot as plt
+"""
+Utiltity classes to help plotting lines interactively.
+"""
 
+import matplotlib.pyplot as plt
 
 # Plot helper class
 class Plot:

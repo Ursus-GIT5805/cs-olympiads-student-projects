@@ -1,7 +1,10 @@
+"""
+Utility methods to load different datasets.
+"""
+
 import jax.numpy as jnp
 import pickle
 import ml_datasets
-
 
 def load_mnist():
     (train_x, train_y), (test_x, test_y) = ml_datasets.mnist()
@@ -44,17 +47,3 @@ def load_cifar10(path: str):
 
         return batch, label
     return None
-
-
-def load_mnist_teacher_student():
-    (train_x, train_y), (test_x, test_y) = ml_datasets.mnist()
-    train_teacher_x = train_x[:27000]
-    train_teacher_y = train_y[:27000]
-    train_student_x = train_x[27000:]
-    train_student_y = train_y[27000:]
-
-    return (
-        (train_teacher_x, train_teacher_y),
-        (train_student_x, train_student_y),
-        (test_x, test_y),
-    )

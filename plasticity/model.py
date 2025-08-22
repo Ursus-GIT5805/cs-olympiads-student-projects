@@ -1,3 +1,9 @@
+"""
+Class and methods working with the Model.
+
+Also includes several loss/cost functions.
+"""
+
 import jax
 import jax.numpy as jnp
 import optax
